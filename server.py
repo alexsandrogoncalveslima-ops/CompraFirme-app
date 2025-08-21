@@ -19,9 +19,6 @@ def login():
     username = data.get('username')
     password = data.get('password')
 
-    # Simulação de usuários e senhas. ISSO NÃO É SEGURO!
-    # Apenas para fins de demonstração.
-    # No futuro, usaremos um banco de dados para isso.
     if username == 'admin' and password == '12345':
         return jsonify({"message": "Login bem-sucedido!"}), 200
     else:
@@ -48,5 +45,23 @@ def add_payment():
     except sqlite3.Error as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/total_paid', methods=['GET'])
+def get_total_paid():
+    """Endpoint para calcular e retornar o total de pagamentos."""
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT SUM(valor) FROM pagamentos")
+        total = cursor.fetchone()[0]
+        conn.close()
+        return jsonify({"total": total if total is not None else 0}), 200
+    except sqlite3.Error as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    from database import create_connection, create_table
+    conn = create_connection()
+    if conn:
+        create_table(conn)
+        conn.close()
+    app.run(host='0.0.0.0', port=10000)

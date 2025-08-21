@@ -1,33 +1,34 @@
-import sqlite3
-import datetime
+import requests
 
-DATABASE = 'comprada_imovel.db'
-
-def connect_db():
-    """Conecta ao banco de dados e retorna o objeto de conexão."""
-    return sqlite3.connect(DATABASE)
+SERVER_URL = "https://comprafirme-app.onrender.com"
 
 def add_payment(nome_pagador, valor):
-    """Adiciona um novo pagamento à tabela."""
-    conn = connect_db()
-    cursor = conn.cursor()
-    data_hoje = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    cursor.execute(
-        "INSERT INTO pagamentos (nome_pagador, valor, data) VALUES (?, ?, ?)",
-        (nome_pagador, valor, data_hoje)
-    )
-    conn.commit()
-    conn.close()
-    print(f"Pagamento de R${valor:.2f} por {nome_pagador} adicionado com sucesso!")
+    """Envia um novo pagamento para o servidor online."""
+    payload = {
+        "nome_pagador": nome_pagador,
+        "valor": valor
+    }
+    response = requests.post(f"{SERVER_URL}/add_payment", json=payload)
+    if response.status_code == 201:
+        print("Pagamento registrado com sucesso no servidor!")
+    else:
+        print(f"Erro ao registrar pagamento: {response.status_code}")
+        try:
+            print(response.json())
+        except requests.exceptions.JSONDecodeError:
+            print("Resposta do servidor não é JSON.")
 
 def get_total_paid():
-    """Calcula a soma de todos os pagamentos realizados."""
-    conn = connect_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT SUM(valor) FROM pagamentos")
-    total = cursor.fetchone()[0]
-    conn.close()
-    return total if total is not None else 0
+    """Obtém o total de pagamentos do servidor online."""
+    try:
+        response = requests.get(f"{SERVER_URL}/total_paid")
+        if response.status_code == 200:
+            return response.json().get('total', 0)
+        print(f"Erro ao obter total: {response.status_code}")
+        return 0
+    except requests.exceptions.RequestException as e:
+        print(f"Erro de conexão: {e}")
+        return 0
 
 def get_remaining_amount(total_imovel=280000):
     """Calcula o valor restante a ser pago."""
@@ -35,19 +36,7 @@ def get_remaining_amount(total_imovel=280000):
     return total_imovel - total_pago
 
 if __name__ == '__main__':
-    # Exemplo de uso das funções
-    print("--- Testando a lógica da aplicação ---")
-
-    # Adicionar alguns pagamentos de exemplo
-    add_payment("João", 10000)
-    add_payment("Maria", 5000)
-
-    # Obter o total pago
-    total_pago_atual = get_total_paid()
-    print(f"Total já pago: R${total_pago_atual:.2f}")
-
-    # Obter o valor restante
-    valor_restante = get_remaining_amount()
-    print(f"Valor restante a pagar: R${valor_restante:.2f}")
-
+    print("--- Testando a lógica da aplicação contra o servidor online ---")
+    add_payment("Teste API", 5000)
+    print(f"Total pago: R${get_total_paid():.2f}")
     print("--- Teste concluído ---")
