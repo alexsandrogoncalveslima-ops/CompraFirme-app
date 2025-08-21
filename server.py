@@ -1,32 +1,61 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, g
 import sqlite3
+import bcrypt
+import os
+import uuid
 
+# --- CONFIGURAÇÕES ---
 app = Flask(__name__)
-
-# Configurações do banco de dados (ainda local)
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'uma_chave_secreta_padrao')
 DATABASE = 'comprada_imovel.db'
+SESSIONS = {} # Simulação de sessões com um dicionário
 
-def connect_db():
-    """Cria e retorna uma conexão com o banco de dados."""
-    return sqlite3.connect(DATABASE)
+def get_db():
+    db = getattr(g, '_database', None)
+    if db is None:
+        db = g._database = sqlite3.connect(DATABASE)
+    return db
 
-# --- ROTAS DE AUTENTICAÇÃO E PAGAMENTO ---
+@app.teardown_appcontext
+def close_connection(exception):
+    db = getattr(g, '_database', None)
+    if db is not None:
+        db.close()
+
+# --- AUTENTICAÇÃO E DECORADOR ---
+def authenticate(func):
+    def wrapper(*args, **kwargs):
+        session_key = request.headers.get('Authorization')
+        if not session_key or session_key not in SESSIONS:
+            return jsonify({"error": "Autenticação necessária"}), 401
+        
+        g.user_id = SESSIONS[session_key]
+        return func(*args, **kwargs)
+    return wrapper
+
+# --- ROTAS DA API ---
 
 @app.route('/login', methods=['POST'])
 def login():
-    """Endpoint para autenticação de usuário."""
     data = request.get_json()
     username = data.get('username')
     password = data.get('password')
 
-    if username == 'admin' and password == '12345':
-        return jsonify({"message": "Login bem-sucedido!"}), 200
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, password FROM users WHERE username = ?", (username,))
+    user_data = cursor.fetchone()
+
+    if user_data and bcrypt.checkpw(password.encode('utf-8'), user_data[1].encode('utf-8')):
+        session_key = str(uuid.uuid4())
+        SESSIONS[session_key] = user_data[0] # Associa a chave à ID do usuário
+        return jsonify({"message": "Login bem-sucedido!", "session_key": session_key}), 200
     else:
         return jsonify({"error": "Credenciais inválidas"}), 401
 
 @app.route('/add_payment', methods=['POST'])
+@authenticate
 def add_payment():
-    """Endpoint para adicionar um novo pagamento."""
     data = request.get_json()
     nome_pagador = data.get('nome_pagador')
     valor = data.get('valor')
@@ -34,34 +63,27 @@ def add_payment():
     if not nome_pagador or not valor:
         return jsonify({"error": "Dados de pagamento incompletos"}), 400
 
-    try:
-        conn = connect_db()
-        cursor = conn.cursor()
-        cursor.execute("INSERT INTO pagamentos (nome_pagador, valor, data) VALUES (?, ?, datetime('now'))",
-                       (nome_pagador, valor))
-        conn.commit()
-        conn.close()
-        return jsonify({"message": "Pagamento registrado com sucesso!"}), 201
-    except sqlite3.Error as e:
-        return jsonify({"error": str(e)}), 500
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO pagamentos (nome_pagador, valor, data) VALUES (?, ?, datetime('now'))",
+                   (nome_pagador, valor))
+    conn.commit()
+    return jsonify({"message": "Pagamento registrado com sucesso!"}), 201
 
 @app.route('/total_paid', methods=['GET'])
+@authenticate
 def get_total_paid():
-    """Endpoint para calcular e retornar o total de pagamentos."""
-    try:
-        conn = connect_db()
-        cursor = conn.cursor()
-        cursor.execute("SELECT SUM(valor) FROM pagamentos")
-        total = cursor.fetchone()[0]
-        conn.close()
-        return jsonify({"total": total if total is not None else 0}), 200
-    except sqlite3.Error as e:
-        return jsonify({"error": str(e)}), 500
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT SUM(valor) FROM pagamentos")
+    total = cursor.fetchone()[0]
+    return jsonify({"total": total if total is not None else 0}), 200
 
 if __name__ == '__main__':
-    from database import create_connection, create_table
+    from database import create_connection, create_tables, add_admin_user
     conn = create_connection()
     if conn:
-        create_table(conn)
+        create_tables(conn)
+        add_admin_user(conn)
         conn.close()
     app.run(host='0.0.0.0', port=10000)
