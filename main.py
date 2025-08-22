@@ -431,8 +431,10 @@ class PaymentsScreen(Screen):
         popup_layout.add_widget(password_input)
         
         btn_layout = BoxLayout(size_hint_y=None, height=dp(40), spacing=dp(10))
-        cancel_btn = RoundedButton(text='Cancelar')
-        confirm_btn = RoundedButton(text='Confirmar')
+        
+        # Correção aqui: Adicionar o texto aos botões
+        cancel_btn = RoundedButton(text='Cancelar', background_color=SECONDARY_COLOR, color=TEXT_COLOR_DARK)
+        confirm_btn = RoundedButton(text='Confirmar', background_color=ACCENT_COLOR, color=(1, 1, 1, 1))
         
         btn_layout.add_widget(cancel_btn)
         btn_layout.add_widget(confirm_btn)
@@ -496,8 +498,10 @@ class EditPaymentPopup(Popup):
         layout.add_widget(self.password_input)
         
         btn_layout = BoxLayout(size_hint_y=None, height=dp(40), spacing=dp(10))
-        cancel_btn = RoundedButton(text='Cancelar')
-        confirm_btn = RoundedButton(text='Confirmar Edição')
+        
+        # Correção aqui: Adicionar o texto aos botões
+        cancel_btn = RoundedButton(text='Cancelar', background_color=SECONDARY_COLOR, color=TEXT_COLOR_DARK)
+        confirm_btn = RoundedButton(text='Confirmar Edição', background_color=PRIMARY_COLOR, color=(1, 1, 1, 1))
         
         btn_layout.add_widget(cancel_btn)
         btn_layout.add_widget(confirm_btn)
