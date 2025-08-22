@@ -22,39 +22,9 @@ def close_connection(exception):
     if db is not None:
         db.close()
 
-# --- AUTENTICAÇÃO E DECORADOR ---
-def authenticate(func):
-    def wrapper(*args, **kwargs):
-        session_key = request.headers.get('Authorization')
-        if not session_key or session_key not in SESSIONS:
-            return jsonify({"error": "Autenticação necessária"}), 401
-        
-        g.user_id = SESSIONS[session_key]
-        return func(*args, **kwargs)
-    return wrapper
-
 # --- ROTAS DA API ---
 
-@app.route('/login', methods=['POST'])
-def login():
-    data = request.get_json()
-    username = data.get('username')
-    password = data.get('password')
-
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, password FROM users WHERE username = ?", (username,))
-    user_data = cursor.fetchone()
-
-    if user_data and bcrypt.checkpw(password.encode('utf-8'), user_data[1].encode('utf-8')):
-        session_key = str(uuid.uuid4())
-        SESSIONS[session_key] = user_data[0] # Associa a chave à ID do usuário
-        return jsonify({"message": "Login bem-sucedido!", "session_key": session_key}), 200
-    else:
-        return jsonify({"error": "Credenciais inválidas"}), 401
-
 @app.route('/add_payment', methods=['POST'])
-@authenticate
 def add_payment():
     data = request.get_json()
     nome_pagador = data.get('nome_pagador')
@@ -71,13 +41,31 @@ def add_payment():
     return jsonify({"message": "Pagamento registrado com sucesso!"}), 201
 
 @app.route('/total_paid', methods=['GET'])
-@authenticate
 def get_total_paid():
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("SELECT SUM(valor) FROM pagamentos")
     total = cursor.fetchone()[0]
     return jsonify({"total": total if total is not None else 0}), 200
+
+# Endpoint de login mantido para referência futura, mas não usado pelo app
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, password FROM users WHERE username = ?", (username,))
+    user_data = cursor.fetchone()
+
+    if user_data and bcrypt.checkpw(password.encode('utf-8'), user_data[1].encode('utf-8')):
+        session_key = str(uuid.uuid4())
+        SESSIONS[session_key] = user_data[0]
+        return jsonify({"message": "Login bem-sucedido!", "session_key": session_key}), 200
+    else:
+        return jsonify({"error": "Credenciais inválidas"}), 401
 
 if __name__ == '__main__':
     from database import create_connection, create_tables, add_admin_user
