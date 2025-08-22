@@ -69,6 +69,7 @@ class EditPaymentPopup(Popup):
     def confirm_edit(self, instance):
         # AQUI VOCÊ ADICIONA A LÓGICA PARA ATUALIZAR O PAGAMENTO NO SERVIDOR
         # self.dismiss()
+        pass
 
 class AdminPasswordPopup(Popup):
     def __init__(self, payment_id, **kwargs):
@@ -96,6 +97,7 @@ class AdminPasswordPopup(Popup):
     def confirm_delete(self, instance):
         # AQUI VOCÊ ADICIONA A LÓGICA PARA EXCLUIR O PAGAMENTO NO SERVIDOR
         # self.dismiss()
+        pass
 
 class RoundedButton(Button):
     def __init__(self, **kwargs):
