@@ -48,7 +48,25 @@ def get_total_paid():
     total = cursor.fetchone()[0]
     return jsonify({"total": total if total is not None else 0}), 200
 
-# Endpoint de login mantido para referência futura, mas não usado pelo app
+# NOVO ENDPOINT: Rota para obter todos os pagamentos
+@app.route('/payments', methods=['GET'])
+def get_payments():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, nome_pagador, valor, data FROM pagamentos ORDER BY data DESC")
+    pagamentos = cursor.fetchall()
+
+    pagamentos_list = []
+    for p in pagamentos:
+        pagamentos_list.append({
+            "id": p[0],
+            "nome_pagador": p[1],
+            "valor": p[2],
+            "data": p[3]
+        })
+    return jsonify(pagamentos_list), 200
+
+
 @app.route('/login', methods=['POST'])
 def login():
     data = request.get_json()

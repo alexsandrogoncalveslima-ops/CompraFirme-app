@@ -8,6 +8,8 @@ from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.metrics import dp
 from kivy.properties import StringProperty
 from kivy.core.window import Window
+from kivy.uix.scrollview import ScrollView
+from kivy.uix.gridlayout import GridLayout
 import requests
 import json
 from threading import Thread
@@ -27,6 +29,11 @@ class MainScreen(Screen):
             padding=dp(20),
             spacing=dp(10)
         )
+        
+        # Botão para visualizar os pagamentos
+        payments_button = Button(text='Ver Pagamentos', size_hint_y=None, height=dp(44))
+        payments_button.bind(on_press=self.go_to_payments_screen)
+        main_container.add_widget(payments_button)
         
         main_container.add_widget(Label(text='Valor Total do Imóvel: R$ 280.000,00', font_size='20sp'))
         
@@ -101,11 +108,87 @@ class MainScreen(Screen):
             self.total_paid_label.text = "Valor inválido. Use um número (ex: 10000.00)."
         finally:
             self.add_button.disabled = False
+            
+    def go_to_payments_screen(self, instance):
+        self.manager.current = 'payments'
+
+class PaymentsScreen(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        
+        self.layout = BoxLayout(orientation='vertical', padding=dp(10), spacing=dp(10))
+        
+        header_layout = BoxLayout(size_hint_y=None, height=dp(50))
+        header_layout.add_widget(Button(text='Voltar', size_hint_x=0.2, on_press=self.go_back))
+        header_layout.add_widget(Label(text='Histórico de Pagamentos', font_size='24sp', size_hint_x=0.8))
+        self.layout.add_widget(header_layout)
+
+        self.scroll_view = ScrollView()
+        self.payments_list_container = GridLayout(cols=1, spacing=dp(10), size_hint_y=None, row_default_height=dp(50))
+        self.payments_list_container.bind(minimum_height=self.payments_list_container.setter('height'))
+        self.scroll_view.add_widget(self.payments_list_container)
+        
+        self.layout.add_widget(self.scroll_view)
+        self.add_widget(self.layout)
+
+    def on_enter(self, *args):
+        self.load_payments()
+
+    def load_payments(self):
+        # Limpa a lista antes de carregar
+        self.payments_list_container.clear_widgets()
+        
+        # Chama a API de forma assíncrona
+        Thread(target=self.fetch_payments_data).start()
+
+    def fetch_payments_data(self):
+        try:
+            response = requests.get(f"{SERVER_URL}/payments")
+            if response.status_code == 200:
+                pagamentos = response.json()
+                self.populate_list_on_main_thread(pagamentos)
+            else:
+                self.add_message_on_main_thread("Erro ao carregar pagamentos.")
+        except requests.exceptions.RequestException:
+            self.add_message_on_main_thread("Erro de conexão com o servidor.")
+            
+    def populate_list_on_main_thread(self, pagamentos):
+        # Acesso seguro aos widgets da UI
+        from kivy.clock import mainthread
+        @mainthread
+        def populate_widgets():
+            if not pagamentos:
+                self.payments_list_container.add_widget(Label(text="Nenhum pagamento registrado."))
+            else:
+                for p in pagamentos:
+                    # Formata a data e o valor
+                    data_formatada = p['data'].split(' ')[0]
+                    valor_formatado = f"R$ {p['valor']:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                    
+                    # Cria a linha do pagamento
+                    payment_item = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(50), padding=dp(5), spacing=dp(5))
+                    payment_item.add_widget(Label(text=p['nome_pagador'], size_hint_x=0.4))
+                    payment_item.add_widget(Label(text=valor_formatado, size_hint_x=0.3))
+                    payment_item.add_widget(Label(text=data_formatada, size_hint_x=0.3))
+                    
+                    self.payments_list_container.add_widget(payment_item)
+        populate_widgets()
+        
+    def add_message_on_main_thread(self, message):
+        from kivy.clock import mainthread
+        @mainthread
+        def add_message():
+            self.payments_list_container.add_widget(Label(text=message))
+        add_message()
+            
+    def go_back(self, instance):
+        self.manager.current = 'main'
 
 class CompraFirmeApp(App):
     def build(self):
         sm = ScreenManager()
         sm.add_widget(MainScreen(name='main'))
+        sm.add_widget(PaymentsScreen(name='payments'))
         return sm
 
 if __name__ == '__main__':
