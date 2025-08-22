@@ -42,6 +42,65 @@ def show_popup(title, message, is_success=True):
     )
     popup.open()
 
+# Stubs para as classes que faltam, para evitar o erro de 'not defined'
+# Você precisará preencher a lógica dessas classes.
+class EditPaymentPopup(Popup):
+    def __init__(self, payment_id, name, value, **kwargs):
+        super().__init__(**kwargs)
+        self.title = 'Editar Pagamento'
+        self.size_hint = (0.9, 0.5)
+        self.payment_id = payment_id
+        
+        content = BoxLayout(orientation='vertical', padding=dp(20), spacing=dp(10))
+        
+        self.name_input = TextInput(text=name, multiline=False, size_hint_y=None, height=dp(45))
+        self.value_input = TextInput(text=str(value), multiline=False, input_type='number', size_hint_y=None, height=dp(45))
+        
+        button_layout = BoxLayout(spacing=dp(10))
+        confirm_button = Button(text='Salvar', on_press=self.confirm_edit)
+        cancel_button = Button(text='Cancelar', on_press=self.dismiss)
+        button_layout.add_widget(confirm_button)
+        button_layout.add_widget(cancel_button)
+        
+        content.add_widget(self.name_input)
+        content.add_widget(self.value_input)
+        content.add_widget(button_layout)
+        
+        self.content = content
+    
+    def confirm_edit(self, instance):
+        # Implementar a lógica para enviar a requisição PUT para o servidor
+        # e fechar o popup
+        self.dismiss()
+
+class AdminPasswordPopup(Popup):
+    def __init__(self, payment_id, **kwargs):
+        super().__init__(**kwargs)
+        self.title = 'Excluir Pagamento'
+        self.size_hint = (0.9, 0.4)
+        self.payment_id = payment_id
+        
+        content = BoxLayout(orientation='vertical', padding=dp(20), spacing=dp(10))
+        content.add_widget(Label(text='Insira a senha de administrador para excluir:', size_hint_y=None, height=dp(30)))
+        
+        self.password_input = TextInput(password=True, multiline=False, size_hint_y=None, height=dp(45))
+        
+        button_layout = BoxLayout(spacing=dp(10))
+        confirm_button = Button(text='Confirmar', on_press=self.confirm_delete)
+        cancel_button = Button(text='Cancelar', on_press=self.dismiss)
+        button_layout.add_widget(confirm_button)
+        button_layout.add_widget(cancel_button)
+        
+        content.add_widget(self.password_input)
+        content.add_widget(button_layout)
+        
+        self.content = content
+    
+    def confirm_delete(self, instance):
+        # Implementar a lógica para verificar a senha e enviar a requisição DELETE
+        # para o servidor, e fechar o popup.
+        self.dismiss()
+
 class RoundedButton(Button):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -396,6 +455,12 @@ class PaymentsScreen(Screen):
     def go_back(self, instance):
         self.manager.current = 'main'
 
+    def show_edit_popup(self, payment_id, name, value):
+        EditPaymentPopup(payment_id, name, value).open()
+
+    def show_admin_password_popup(self, payment_id):
+        AdminPasswordPopup(payment_id).open()
+
 class ContractScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -431,7 +496,7 @@ class ContractScreen(Screen):
             padding=dp(20),
             spacing=dp(15),
             size_hint_y=None,
-            height=self.scroll_view.height # Garante que o BoxLayout se adapte ao ScrollView
+            height=self.scroll_view.height
         )
         contract_content_layout.bind(minimum_height=contract_content_layout.setter('height'))
         
@@ -446,22 +511,21 @@ class ContractScreen(Screen):
         self.load_contract_images()
 
     def load_contract_images(self):
-        self.scroll_view.children[0].clear_widgets() # Limpa o conteúdo anterior
+        self.scroll_view.children[0].clear_widgets()
         
         page_number = 1
+        found_images = False
         while True:
-            image_path = f'assets/contrato_pagina_{page_number}.png'
+            image_path = f'assets/contrato_pagina_{page_number}.jpg' # ALTERADO para .jpg
             if exists(image_path):
-                # O Image do Kivy já tem uma propriedade que permite a renderização
-                # adequada da imagem. Não é necessário ajustar o tamanho aqui.
+                found_images = True
                 image_widget = Image(source=image_path, size_hint_y=None, allow_stretch=True)
                 image_widget.bind(texture_size=image_widget.setter('size'))
                 self.scroll_view.children[0].add_widget(image_widget)
                 page_number += 1
             else:
-                if page_number == 1:
-                    # Se não encontrou nem a primeira página
-                    self.scroll_view.children[0].add_widget(Label(text="Nenhuma página do contrato encontrada. Por favor, adicione as imagens na pasta 'assets' (ex: 'contrato_pagina_1.png').",
+                if not found_images:
+                    self.scroll_view.children[0].add_widget(Label(text="Nenhuma página do contrato encontrada. Por favor, adicione as imagens na pasta 'assets' (ex: 'contrato_pagina_1.jpg').",
                                                                  halign='center', valign='middle', text_size=(Window.width - dp(40), None), color=TEXT_COLOR_LIGHT))
                 break
 
