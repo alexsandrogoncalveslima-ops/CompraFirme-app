@@ -42,8 +42,6 @@ def show_popup(title, message, is_success=True):
     )
     popup.open()
 
-# Stubs para as classes que faltam, para evitar o erro de 'not defined'
-# Você precisará preencher a lógica dessas classes.
 class EditPaymentPopup(Popup):
     def __init__(self, payment_id, name, value, **kwargs):
         super().__init__(**kwargs)
@@ -69,9 +67,8 @@ class EditPaymentPopup(Popup):
         self.content = content
     
     def confirm_edit(self, instance):
-        # Implementar a lógica para enviar a requisição PUT para o servidor
-        # e fechar o popup
-        self.dismiss()
+        # AQUI VOCÊ ADICIONA A LÓGICA PARA ATUALIZAR O PAGAMENTO NO SERVIDOR
+        # self.dismiss()
 
 class AdminPasswordPopup(Popup):
     def __init__(self, payment_id, **kwargs):
@@ -97,9 +94,8 @@ class AdminPasswordPopup(Popup):
         self.content = content
     
     def confirm_delete(self, instance):
-        # Implementar a lógica para verificar a senha e enviar a requisição DELETE
-        # para o servidor, e fechar o popup.
-        self.dismiss()
+        # AQUI VOCÊ ADICIONA A LÓGICA PARA EXCLUIR O PAGAMENTO NO SERVIDOR
+        # self.dismiss()
 
 class RoundedButton(Button):
     def __init__(self, **kwargs):
@@ -516,7 +512,7 @@ class ContractScreen(Screen):
         page_number = 1
         found_images = False
         while True:
-            image_path = f'assets/contrato_pagina_{page_number}.jpg' # ALTERADO para .jpg
+            image_path = f'assets/contrato_pagina_{page_number}.jpg'
             if exists(image_path):
                 found_images = True
                 image_widget = Image(source=image_path, size_hint_y=None, allow_stretch=True)
