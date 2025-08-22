@@ -21,9 +21,10 @@ import requests
 import json
 from threading import Thread
 import re
+from datetime import datetime
 
-# Importa a URL do servidor
-from app_logic import SERVER_URL
+# Importa a URL do servidor e o modelo de contrato
+from app_logic import SERVER_URL, CONTRATO_TEMPLATE
 
 # Torna a janela menor para um visual mais compacto
 Window.size = (400, 600)
@@ -70,8 +71,6 @@ class RoundedButton(Button):
     def on_release(self):
         self.rect_color.a = 1.0
 
-# Movemos a classe EditPaymentPopup para antes de MainScreen e PaymentsScreen
-# para evitar o erro de 'EditPaymentPopup' is not defined
 class EditPaymentPopup(Popup):
     def __init__(self, payment_id, current_nome, current_valor, on_edit_callback, **kwargs):
         super().__init__(**kwargs)
@@ -543,8 +542,6 @@ class PaymentsScreen(Screen):
     def go_back(self, instance):
         self.manager.current = 'main'
 
-
-# Nova classe para a tela de Contrato
 class ContractScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -573,24 +570,210 @@ class ContractScreen(Screen):
         
         root_layout.add_widget(header)
 
-        contract_content = BoxLayout(
+        # ScrollView para o conteúdo do contrato
+        self.scroll_view = ScrollView()
+        
+        contract_content_layout = BoxLayout(
             orientation='vertical',
             padding=dp(20),
-            spacing=dp(15)
+            spacing=dp(15),
+            size_hint_y=None
+        )
+        contract_content_layout.bind(minimum_height=contract_content_layout.setter('height'))
+
+        # Adicionando um Label para exibir o contrato
+        self.contract_label = Label(
+            text=CONTRATO_TEMPLATE,
+            font_size='14sp',
+            halign='left',
+            valign='top',
+            color=TEXT_COLOR_DARK,
+            text_size=(Window.width - dp(40), None),
+            size_hint_y=None
+        )
+        self.contract_label.bind(texture_size=self.contract_label.setter('size'))
+        contract_content_layout.add_widget(self.contract_label)
+
+        # Container para os campos de entrada (TextInput)
+        input_container = GridLayout(
+            cols=2,
+            spacing=dp(10),
+            size_hint_y=None
+        )
+        input_container.bind(minimum_height=input_container.setter('height'))
+
+        # SEÇÃO VENDEDOR
+        input_container.add_widget(Label(text='Dados do Vendedor', font_size='16sp', bold=True, color=PRIMARY_COLOR, halign='left', size_hint_x=1.0))
+        input_container.add_widget(Widget())
+        
+        self.vendedor_nome = self.add_input(input_container, 'Nome:')
+        self.vendedor_nacionalidade = self.add_input(input_container, 'Nacionalidade:')
+        self.vendedor_profissao = self.add_input(input_container, 'Profissão:')
+        self.vendedor_estado_civil = self.add_input(input_container, 'Estado Civil:')
+        self.vendedor_rg = self.add_input(input_container, 'RG:')
+        self.vendedor_cpf = self.add_input(input_container, 'CPF:')
+        self.vendedor_rua = self.add_input(input_container, 'Rua:')
+        self.vendedor_numero = self.add_input(input_container, 'Número:')
+        self.vendedor_bairro = self.add_input(input_container, 'Bairro:')
+        self.vendedor_estado = self.add_input(input_container, 'Estado:')
+
+        # SEÇÃO COMPRADOR
+        input_container.add_widget(Label(text='Dados do Comprador', font_size='16sp', bold=True, color=PRIMARY_COLOR, halign='left', size_hint_x=1.0))
+        input_container.add_widget(Widget())
+
+        self.comprador_nome = self.add_input(input_container, 'Nome:')
+        self.comprador_nacionalidade = self.add_input(input_container, 'Nacionalidade:')
+        self.comprador_profissao = self.add_input(input_container, 'Profissão:')
+        self.comprador_estado_civil = self.add_input(input_container, 'Estado Civil:')
+        self.comprador_rg = self.add_input(input_container, 'RG:')
+        self.comprador_cpf = self.add_input(input_container, 'CPF:')
+        self.comprador_rua = self.add_input(input_container, 'Rua:')
+        self.comprador_numero = self.add_input(input_container, 'Número:')
+        self.comprador_bairro = self.add_input(input_container, 'Bairro:')
+        self.comprador_estado = self.add_input(input_container, 'Estado:')
+
+        # SEÇÃO IMÓVEL
+        input_container.add_widget(Label(text='Dados do Imóvel', font_size='16sp', bold=True, color=PRIMARY_COLOR, halign='left', size_hint_x=1.0))
+        input_container.add_widget(Widget())
+
+        self.imovel_rua = self.add_input(input_container, 'Rua:')
+        self.imovel_numero = self.add_input(input_container, 'Número:')
+        self.imovel_bairro = self.add_input(input_container, 'Bairro:')
+        self.imovel_estado = self.add_input(input_container, 'Estado:')
+        self.imovel_descricao = self.add_input(input_container, 'Descrição:')
+        self.imovel_aquisicao = self.add_input(input_container, 'Forma de Aquisição:')
+        self.imovel_registro = self.add_input(input_container, 'Registro:')
+        self.imovel_matricula = self.add_input(input_container, 'Matrícula:')
+
+        # SEÇÃO VALORES E PAGAMENTOS
+        input_container.add_widget(Label(text='Valores e Pagamentos', font_size='16sp', bold=True, color=PRIMARY_COLOR, halign='left', size_hint_x=1.0))
+        input_container.add_widget(Widget())
+
+        self.valor_total = self.add_input(input_container, 'Valor Total (R$):', input_type='number')
+        self.sinal = self.add_input(input_container, 'Valor do Sinal (R$):', input_type='number')
+        self.cheque_sinal = self.add_input(input_container, 'Cheque Sinal:')
+        self.banco_sinal = self.add_input(input_container, 'Banco Sinal:')
+        self.valor_parcela_1 = self.add_input(input_container, 'Valor da 1ª Parcela (R$):', input_type='number')
+        self.data_parcela_1 = self.add_input(input_container, 'Data da 1ª Parcela (DD/MM/AAAA):')
+        self.saldo_restante = self.add_input(input_container, 'Saldo Restante (R$):', input_type='number')
+        self.data_lavratura_escritura = self.add_input(input_container, 'Data Lavratura Escritura (DD/MM/AAAA):')
+        self.porcentagem_multa = self.add_input(input_container, 'Multa (%):', input_type='number')
+        self.indice_reajuste = self.add_input(input_container, 'Índice de Reajuste:')
+        self.data_transferencia_posse = self.add_input(input_container, 'Data Transf. Posse (DD/MM/AAAA):')
+        self.aluguel_diario = self.add_input(input_container, 'Aluguel Diário (R$):', input_type='number')
+        self.local_assinatura = self.add_input(input_container, 'Local de Assinatura:')
+        self.data_assinatura = self.add_input(input_container, 'Data da Assinatura (DD/MM/AAAA):')
+        self.foro = self.add_input(input_container, 'Foro:')
+
+        contract_content_layout.add_widget(input_container)
+        self.scroll_view.add_widget(contract_content_layout)
+        root_layout.add_widget(self.scroll_view)
+
+        # Layout para os botões de ação do contrato
+        button_layout = BoxLayout(
+            orientation='horizontal',
+            size_hint_y=None,
+            height=dp(50),
+            spacing=dp(10)
         )
         
-        # Exemplo de conteúdo do contrato
-        contract_content.add_widget(Label(text='Detalhes do Contrato', font_size='18sp', bold=True, color=PRIMARY_COLOR))
-        contract_content.add_widget(Label(text='Número do Contrato: #20250822', font_size='14sp', halign='left', valign='middle', color=TEXT_COLOR_DARK))
-        contract_content.add_widget(Label(text='Data de Assinatura: 22/08/2025', font_size='14sp', halign='left', valign='middle', color=TEXT_COLOR_DARK))
-        contract_content.add_widget(Label(text='Partes Envolvidas:', font_size='14sp', bold=True, halign='left', valign='middle', color=TEXT_COLOR_DARK))
-        contract_content.add_widget(Label(text='- Vendedor: João da Silva', font_size='14sp', halign='left', valign='middle', color=TEXT_COLOR_LIGHT))
-        contract_content.add_widget(Label(text='- Comprador: Alexsandro', font_size='14sp', halign='left', valign='middle', color=TEXT_COLOR_LIGHT))
+        save_button = RoundedButton(text='Salvar Contrato', background_color=PRIMARY_COLOR)
+        save_button.bind(on_press=self.update_contract)
+        
+        clear_button = RoundedButton(text='Novo Contrato', background_color=SECONDARY_COLOR, color=TEXT_COLOR_DARK)
+        clear_button.bind(on_press=self.clear_fields)
+        
+        generate_pdf_button = RoundedButton(text='Gerar PDF', background_color=SUCCESS_COLOR)
+        # Note: Esta funcionalidade precisa de bibliotecas adicionais, por isso é um placeholder.
+        # generate_pdf_button.bind(on_press=self.generate_pdf)
 
-        root_layout.add_widget(contract_content)
-        root_layout.add_widget(Widget()) # Espaçador
+        button_layout.add_widget(save_button)
+        button_layout.add_widget(clear_button)
+        button_layout.add_widget(generate_pdf_button)
 
+        root_layout.add_widget(button_layout)
         self.add_widget(root_layout)
+
+    def add_input(self, layout, label_text, **kwargs):
+        layout.add_widget(Label(text=label_text, font_size='14sp', halign='left', valign='middle', size_hint_y=None, height=dp(35)))
+        text_input = TextInput(multiline=False, size_hint_y=None, height=dp(35), **kwargs)
+        layout.add_widget(text_input)
+        return text_input
+
+    def update_contract(self, instance):
+        try:
+            # Obtém os dados dos campos
+            dados_contrato = {
+                "vendedor_nome": self.vendedor_nome.text,
+                "vendedor_nacionalidade": self.vendedor_nacionalidade.text,
+                "vendedor_profissao": self.vendedor_profissao.text,
+                "vendedor_estado_civil": self.vendedor_estado_civil.text,
+                "vendedor_rg": self.vendedor_rg.text,
+                "vendedor_cpf": self.vendedor_cpf.text,
+                "vendedor_rua": self.vendedor_rua.text,
+                "vendedor_numero": self.vendedor_numero.text,
+                "vendedor_bairro": self.vendedor_bairro.text,
+                "vendedor_estado": self.vendedor_estado.text,
+                "comprador_nome": self.comprador_nome.text,
+                "comprador_nacionalidade": self.comprador_nacionalidade.text,
+                "comprador_profissao": self.comprador_profissao.text,
+                "comprador_estado_civil": self.comprador_estado_civil.text,
+                "comprador_rg": self.comprador_rg.text,
+                "comprador_cpf": self.comprador_cpf.text,
+                "comprador_rua": self.comprador_rua.text,
+                "comprador_numero": self.comprador_numero.text,
+                "comprador_bairro": self.comprador_bairro.text,
+                "comprador_estado": self.comprador_estado.text,
+                "imovel_rua": self.imovel_rua.text,
+                "imovel_numero": self.imovel_numero.text,
+                "imovel_bairro": self.imovel_bairro.text,
+                "imovel_estado": self.imovel_estado.text,
+                "imovel_descricao": self.imovel_descricao.text,
+                "imovel_aquisicao": self.imovel_aquisicao.text,
+                "imovel_registro": self.imovel_registro.text,
+                "imovel_matricula": self.imovel_matricula.text,
+                "valor_total": self.valor_total.text,
+                "valor_total_extenso": "(valor por extenso)", # Placeholder
+                "sinal": self.sinal.text,
+                "sinal_extenso": "(valor por extenso)", # Placeholder
+                "cheque_sinal": self.cheque_sinal.text,
+                "banco_sinal": self.banco_sinal.text,
+                "valor_parcela_1": self.valor_parcela_1.text,
+                "valor_parcela_1_extenso": "(valor por extenso)", # Placeholder
+                "data_parcela_1": self.data_parcela_1.text,
+                "saldo_restante": self.saldo_restante.text,
+                "saldo_restante_extenso": "(valor por extenso)", # Placeholder
+                "data_lavratura_escritura": self.data_lavratura_escritura.text,
+                "porcentagem_multa": self.porcentagem_multa.text,
+                "porcentagem_multa_extenso": "(por extenso)", # Placeholder
+                "indice_reajuste": self.indice_reajuste.text,
+                "data_transferencia_posse": self.data_transferencia_posse.text,
+                "aluguel_diario": self.aluguel_diario.text,
+                "aluguel_diario_extenso": "(valor por extenso)", # Placeholder
+                "local_assinatura": self.local_assinatura.text,
+                "dia_assinatura": self.data_assinatura.text.split('/')[0] if self.data_assinatura.text else '',
+                "mes_assinatura": self.data_assinatura.text.split('/')[1] if self.data_assinatura.text else '',
+                "ano_assinatura": self.data_assinatura.text.split('/')[2] if self.data_assinatura.text else '',
+                "foro": self.foro.text
+            }
+            
+            # Formatar o texto do contrato com os dados inseridos
+            contrato_formatado = CONTRATO_TEMPLATE.format(**dados_contrato)
+            self.contract_label.text = contrato_formatado
+            show_popup("Sucesso", "Contrato atualizado com os novos dados!")
+        except KeyError as e:
+            show_popup("Erro", f"Campo ausente no template: {e}")
+
+    def clear_fields(self, instance):
+        # Itera sobre todos os TextInputs e limpa o texto
+        for child in self.children:
+            if isinstance(child, ScrollView):
+                for grid_child in child.children[0].children:
+                    if isinstance(grid_child, TextInput):
+                        grid_child.text = ''
+        
+        self.contract_label.text = CONTRATO_TEMPLATE
+        show_popup("Aviso", "Campos limpos. Você pode criar um novo contrato.")
 
     def go_back(self, instance):
         self.manager.current = 'main'
