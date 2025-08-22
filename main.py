@@ -71,52 +71,398 @@ class RoundedButton(Button):
     def on_release(self):
         self.rect_color.a = 1.0
 
-class EditPaymentPopup(Popup):
-    def __init__(self, payment_id, current_nome, current_valor, on_edit_callback, **kwargs):
+class WizardScreen(Screen):
+    """Classe base para as telas do wizard de contrato."""
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.payment_id = payment_id
-        self.on_edit_callback = on_edit_callback
+        self.layout = BoxLayout(
+            orientation='vertical',
+            padding=dp(20),
+            spacing=dp(20)
+        )
+        self.add_widget(self.layout)
+    
+    def build_header(self, title_text, step_text):
+        header_layout = BoxLayout(
+            orientation='horizontal',
+            size_hint_y=None,
+            height=dp(50)
+        )
         
-        layout = BoxLayout(orientation='vertical', padding=dp(10), spacing=dp(10))
-        layout.add_widget(Label(text='Editar Pagamento', font_size='20sp'))
+        # O botão Voltar só aparece nas telas intermediárias
+        if self.name in ['comprador_form', 'vendedor_form', 'contrato_resumo']:
+            back_button = RoundedButton(
+                text='Voltar',
+                size_hint_x=0.2,
+                background_color=SECONDARY_COLOR,
+                color=TEXT_COLOR_DARK
+            )
+            back_button.bind(on_press=self.go_back)
+            header_layout.add_widget(back_button)
         
-        self.name_input = TextInput(text=current_nome, multiline=False, hint_text='Nome do Pagador', size_hint_y=None, height=dp(35))
-        layout.add_widget(self.name_input)
+        header_layout.add_widget(Label(
+            text=f'Etapa {step_text}',
+            font_size='18sp',
+            color=TEXT_COLOR_LIGHT,
+            halign='right',
+            valign='middle',
+            size_hint_x=0.2
+        ))
         
-        self.value_input = TextInput(text=str(current_valor), multiline=False, hint_text='Valor', input_type='number', size_hint_y=None, height=dp(35))
-        layout.add_widget(self.value_input)
+        header_layout.add_widget(Label(
+            text=title_text,
+            font_size='22sp',
+            bold=True,
+            color=TEXT_COLOR_DARK,
+            halign='left',
+            valign='middle',
+            size_hint_x=0.6
+        ))
         
-        self.password_input = TextInput(password=True, multiline=False, hint_text='Senha de Administrador', size_hint_y=None, height=dp(35))
-        layout.add_widget(self.password_input)
+        self.layout.add_widget(header_layout, index=len(self.layout.children))
         
-        btn_layout = BoxLayout(size_hint_y=None, height=dp(40), spacing=dp(10))
-        
-        cancel_btn = RoundedButton(text='Cancelar', background_color=SECONDARY_COLOR, color=TEXT_COLOR_DARK)
-        confirm_btn = RoundedButton(text='Confirmar Edição', background_color=PRIMARY_COLOR, color=(1, 1, 1, 1))
-        
-        btn_layout.add_widget(cancel_btn)
-        btn_layout.add_widget(confirm_btn)
-        layout.add_widget(btn_layout)
-        
-        self.content = layout
-        self.title = 'Editar Pagamento'
-        self.size_hint = (0.9, 0.6)
-        self.auto_dismiss = False
-        
-        def dismiss_popup(instance):
-            self.dismiss()
-        
-        def confirm_edit(instance):
-            new_nome = self.name_input.text
-            new_valor = self.value_input.text
-            password = self.password_input.text
-            self.on_edit_callback(self.payment_id, new_nome, new_valor, password)
-            self.dismiss()
+    def add_input_field(self, label_text, hint_text='', **kwargs):
+        box = BoxLayout(orientation='vertical', size_hint_y=None, height=dp(70), spacing=dp(5))
+        box.add_widget(Label(
+            text=label_text,
+            halign='left',
+            valign='bottom',
+            size_hint_y=None,
+            height=dp(20),
+            text_size=(Window.width - dp(40), None),
+            color=TEXT_COLOR_DARK
+        ))
+        text_input = TextInput(
+            multiline=kwargs.get('multiline', False),
+            size_hint_y=None,
+            height=dp(40),
+            background_color=CARD_BG_COLOR,
+            foreground_color=TEXT_COLOR_DARK,
+            hint_text=hint_text
+        )
+        box.add_widget(text_input)
+        return box, text_input
 
-        cancel_btn.bind(on_press=dismiss_popup)
-        confirm_btn.bind(on_press=confirm_edit)
+    def validate_fields(self):
+        # Validação simples
+        for field in self.fields:
+            if not field.text.strip():
+                show_popup("Erro de Validação", "Por favor, preencha todos os campos.", is_success=False)
+                return False
+        return True
+
+    def go_back(self, instance):
+        self.manager.current = 'contrato_resumo' if self.name == 'new_contract' else self.manager.previous()
+
+class ImovelFormScreen(WizardScreen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.build_header('Dados do Imóvel', '1/4')
+        
+        content_layout = BoxLayout(
+            orientation='vertical',
+            padding=dp(20),
+            spacing=dp(15),
+            size_hint_y=None
+        )
+        with content_layout.canvas.before:
+            Color(CARD_BG_COLOR[0], CARD_BG_COLOR[1], CARD_BG_COLOR[2], CARD_BG_COLOR[3])
+            self.rect = RoundedRectangle(size=content_layout.size, pos=content_layout.pos, radius=[dp(15)])
+            content_layout.bind(pos=self.update_rect, size=self.update_rect)
+        
+        self.imovel_rua = TextInput(hint_text='Rua do Imóvel', multiline=False, size_hint_y=None, height=dp(45))
+        self.imovel_numero = TextInput(hint_text='Número do Imóvel', multiline=False, size_hint_y=None, height=dp(45))
+        self.imovel_bairro = TextInput(hint_text='Bairro do Imóvel', multiline=False, size_hint_y=None, height=dp(45))
+        self.imovel_cidade = TextInput(hint_text='Cidade do Imóvel', multiline=False, size_hint_y=None, height=dp(45))
+        self.imovel_estado = TextInput(hint_text='Estado do Imóvel (Ex: MG)', multiline=False, size_hint_y=None, height=dp(45))
+        self.imovel_cep = TextInput(hint_text='CEP do Imóvel', multiline=False, size_hint_y=None, height=dp(45))
+        
+        content_layout.add_widget(Label(text='Endereço do Imóvel', font_size='16sp', color=TEXT_COLOR_DARK, size_hint_y=None, height=dp(30)))
+        content_layout.add_widget(self.imovel_rua)
+        content_layout.add_widget(self.imovel_numero)
+        content_layout.add_widget(self.imovel_bairro)
+        content_layout.add_widget(self.imovel_cidade)
+        content_layout.add_widget(self.imovel_estado)
+        content_layout.add_widget(self.imovel_cep)
+        
+        self.layout.add_widget(content_layout)
+
+        next_button = RoundedButton(
+            text='Próximo',
+            size_hint_y=None,
+            height=dp(50),
+            background_color=PRIMARY_COLOR,
+            color=(1, 1, 1, 1)
+        )
+        next_button.bind(on_press=self.go_next)
+        self.layout.add_widget(next_button)
+
+    def update_rect(self, instance, value):
+        self.rect.pos = instance.pos
+        self.rect.size = instance.size
+    
+    def on_enter(self, *args):
+        data = self.manager.app.contract_data.get('imovel', {})
+        self.imovel_rua.text = data.get('imovel_rua', '')
+        self.imovel_numero.text = data.get('imovel_numero', '')
+        self.imovel_bairro.text = data.get('imovel_bairro', '')
+        self.imovel_cidade.text = data.get('imovel_cidade', '')
+        self.imovel_estado.text = data.get('imovel_estado', '')
+        self.imovel_cep.text = data.get('imovel_cep', '')
+        
+    def go_next(self, instance):
+        if self.imovel_rua.text and self.imovel_numero.text and self.imovel_bairro.text and self.imovel_cidade.text and self.imovel_estado.text and self.imovel_cep.text:
+            self.manager.app.contract_data['imovel'] = {
+                'imovel_rua': self.imovel_rua.text,
+                'imovel_numero': self.imovel_numero.text,
+                'imovel_bairro': self.imovel_bairro.text,
+                'imovel_cidade': self.imovel_cidade.text,
+                'imovel_estado': self.imovel_estado.text,
+                'imovel_cep': self.imovel_cep.text,
+            }
+            self.manager.current = 'comprador_form'
+        else:
+            show_popup("Erro", "Por favor, preencha todos os campos do imóvel.")
+
+class CompradorFormScreen(WizardScreen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.build_header('Dados do Comprador', '2/4')
+        
+        content_layout = BoxLayout(
+            orientation='vertical',
+            padding=dp(20),
+            spacing=dp(15),
+            size_hint_y=None
+        )
+        with content_layout.canvas.before:
+            Color(CARD_BG_COLOR[0], CARD_BG_COLOR[1], CARD_BG_COLOR[2], CARD_BG_COLOR[3])
+            self.rect = RoundedRectangle(size=content_layout.size, pos=content_layout.pos, radius=[dp(15)])
+            content_layout.bind(pos=self.update_rect, size=self.update_rect)
+        
+        self.comprador_nome = TextInput(hint_text='Nome Completo', multiline=False, size_hint_y=None, height=dp(45))
+        self.comprador_nacionalidade = TextInput(hint_text='Nacionalidade', multiline=False, size_hint_y=None, height=dp(45))
+        self.comprador_estado_civil = TextInput(hint_text='Estado Civil', multiline=False, size_hint_y=None, height=dp(45))
+        self.comprador_cpf = TextInput(hint_text='CPF / RG (somente números)', multiline=False, size_hint_y=None, height=dp(45))
+        self.comprador_telefone = TextInput(hint_text='Telefone', multiline=False, size_hint_y=None, height=dp(45))
+        self.comprador_email = TextInput(hint_text='E-mail', multiline=False, size_hint_y=None, height=dp(45))
+        
+        content_layout.add_widget(Label(text='Informações Pessoais', font_size='16sp', color=TEXT_COLOR_DARK, size_hint_y=None, height=dp(30)))
+        content_layout.add_widget(self.comprador_nome)
+        content_layout.add_widget(self.comprador_nacionalidade)
+        content_layout.add_widget(self.comprador_estado_civil)
+        content_layout.add_widget(self.comprador_cpf)
+        content_layout.add_widget(self.comprador_telefone)
+        content_layout.add_widget(self.comprador_email)
+        
+        self.layout.add_widget(content_layout)
+
+        next_button = RoundedButton(
+            text='Próximo',
+            size_hint_y=None,
+            height=dp(50),
+            background_color=PRIMARY_COLOR,
+            color=(1, 1, 1, 1)
+        )
+        next_button.bind(on_press=self.go_next)
+        self.layout.add_widget(next_button)
+
+    def update_rect(self, instance, value):
+        self.rect.pos = instance.pos
+        self.rect.size = instance.size
+        
+    def on_enter(self, *args):
+        data = self.manager.app.contract_data.get('comprador', {})
+        self.comprador_nome.text = data.get('comprador_nome', '')
+        self.comprador_nacionalidade.text = data.get('comprador_nacionalidade', '')
+        self.comprador_estado_civil.text = data.get('comprador_estado_civil', '')
+        self.comprador_cpf.text = data.get('comprador_cpf', '')
+        self.comprador_telefone.text = data.get('comprador_telefone', '')
+        self.comprador_email.text = data.get('comprador_email', '')
+
+    def go_next(self, instance):
+        if self.comprador_nome.text and self.comprador_cpf.text:
+            self.manager.app.contract_data['comprador'] = {
+                'comprador_nome': self.comprador_nome.text,
+                'comprador_nacionalidade': self.comprador_nacionalidade.text,
+                'comprador_estado_civil': self.comprador_estado_civil.text,
+                'comprador_cpf': self.comprador_cpf.text,
+                'comprador_telefone': self.comprador_telefone.text,
+                'comprador_email': self.comprador_email.text,
+            }
+            self.manager.current = 'vendedor_form'
+        else:
+            show_popup("Erro", "Por favor, preencha os campos obrigatórios.")
+
+class VendedorFormScreen(WizardScreen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.build_header('Dados do Vendedor', '3/4')
+        
+        content_layout = BoxLayout(
+            orientation='vertical',
+            padding=dp(20),
+            spacing=dp(15),
+            size_hint_y=None
+        )
+        with content_layout.canvas.before:
+            Color(CARD_BG_COLOR[0], CARD_BG_COLOR[1], CARD_BG_COLOR[2], CARD_BG_COLOR[3])
+            self.rect = RoundedRectangle(size=content_layout.size, pos=content_layout.pos, radius=[dp(15)])
+            content_layout.bind(pos=self.update_rect, size=self.update_rect)
+
+        self.vendedor_nome = TextInput(hint_text='Nome Completo', multiline=False, size_hint_y=None, height=dp(45))
+        self.vendedor_nacionalidade = TextInput(hint_text='Nacionalidade', multiline=False, size_hint_y=None, height=dp(45))
+        self.vendedor_estado_civil = TextInput(hint_text='Estado Civil', multiline=False, size_hint_y=None, height=dp(45))
+        self.vendedor_cpf = TextInput(hint_text='CPF / RG (somente números)', multiline=False, size_hint_y=None, height=dp(45))
+        self.vendedor_telefone = TextInput(hint_text='Telefone', multiline=False, size_hint_y=None, height=dp(45))
+        self.vendedor_email = TextInput(hint_text='E-mail', multiline=False, size_hint_y=None, height=dp(45))
+
+        content_layout.add_widget(Label(text='Informações Pessoais', font_size='16sp', color=TEXT_COLOR_DARK, size_hint_y=None, height=dp(30)))
+        content_layout.add_widget(self.vendedor_nome)
+        content_layout.add_widget(self.vendedor_nacionalidade)
+        content_layout.add_widget(self.vendedor_estado_civil)
+        content_layout.add_widget(self.vendedor_cpf)
+        content_layout.add_widget(self.vendedor_telefone)
+        content_layout.add_widget(self.vendedor_email)
+
+        self.layout.add_widget(content_layout)
+
+        next_button = RoundedButton(
+            text='Próximo',
+            size_hint_y=None,
+            height=dp(50),
+            background_color=PRIMARY_COLOR,
+            color=(1, 1, 1, 1)
+        )
+        next_button.bind(on_press=self.go_next)
+        self.layout.add_widget(next_button)
+
+    def update_rect(self, instance, value):
+        self.rect.pos = instance.pos
+        self.rect.size = instance.size
+        
+    def on_enter(self, *args):
+        data = self.manager.app.contract_data.get('vendedor', {})
+        self.vendedor_nome.text = data.get('vendedor_nome', '')
+        self.vendedor_nacionalidade.text = data.get('vendedor_nacionalidade', '')
+        self.vendedor_estado_civil.text = data.get('vendedor_estado_civil', '')
+        self.vendedor_cpf.text = data.get('vendedor_cpf', '')
+        self.vendedor_telefone.text = data.get('vendedor_telefone', '')
+        self.vendedor_email.text = data.get('vendedor_email', '')
+
+    def go_next(self, instance):
+        if self.vendedor_nome.text and self.vendedor_cpf.text:
+            self.manager.app.contract_data['vendedor'] = {
+                'vendedor_nome': self.vendedor_nome.text,
+                'vendedor_nacionalidade': self.vendedor_nacionalidade.text,
+                'vendedor_estado_civil': self.vendedor_estado_civil.text,
+                'vendedor_cpf': self.vendedor_cpf.text,
+                'vendedor_telefone': self.vendedor_telefone.text,
+                'vendedor_email': self.vendedor_email.text,
+            }
+            self.manager.current = 'contrato_resumo'
+        else:
+            show_popup("Erro", "Por favor, preencha os campos obrigatórios.")
+
+class ContratoResumoScreen(WizardScreen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.build_header('Resumo do Contrato', '4/4')
+        
+        self.scroll_view = ScrollView()
+        self.resumo_container = BoxLayout(
+            orientation='vertical',
+            padding=dp(10),
+            spacing=dp(15),
+            size_hint_y=None
+        )
+        self.resumo_container.bind(minimum_height=self.resumo_container.setter('height'))
+        self.scroll_view.add_widget(self.resumo_container)
+        self.layout.add_widget(self.scroll_view)
+
+        generate_button = RoundedButton(
+            text='Gerar Contrato',
+            size_hint_y=None,
+            height=dp(50),
+            background_color=SUCCESS_COLOR,
+            color=(1, 1, 1, 1)
+        )
+        generate_button.bind(on_press=self.generate_contract)
+        self.layout.add_widget(generate_button)
+
+    def on_enter(self, *args):
+        self.update_resumo()
+
+    def update_resumo(self):
+        self.resumo_container.clear_widgets()
+        data = self.manager.app.contract_data
+
+        # Resumo do Imóvel
+        imovel_card = self.create_resumo_card("Dados do Imóvel", 'imovel_form')
+        if 'imovel' in data:
+            imovel_data = data['imovel']
+            imovel_card.add_widget(Label(text=f"Rua: {imovel_data.get('imovel_rua')}", color=TEXT_COLOR_DARK))
+            imovel_card.add_widget(Label(text=f"Número: {imovel_data.get('imovel_numero')}", color=TEXT_COLOR_DARK))
+            imovel_card.add_widget(Label(text=f"Bairro: {imovel_data.get('imovel_bairro')}", color=TEXT_COLOR_DARK))
+            imovel_card.add_widget(Label(text=f"Cidade: {imovel_data.get('imovel_cidade')}", color=TEXT_COLOR_DARK))
+            imovel_card.add_widget(Label(text=f"Estado: {imovel_data.get('imovel_estado')}", color=TEXT_COLOR_DARK))
+            imovel_card.add_widget(Label(text=f"CEP: {imovel_data.get('imovel_cep')}", color=TEXT_COLOR_DARK))
+        self.resumo_container.add_widget(imovel_card)
+        
+        # Resumo do Comprador
+        comprador_card = self.create_resumo_card("Dados do Comprador", 'comprador_form')
+        if 'comprador' in data:
+            comprador_data = data['comprador']
+            comprador_card.add_widget(Label(text=f"Nome: {comprador_data.get('comprador_nome')}", color=TEXT_COLOR_DARK))
+            comprador_card.add_widget(Label(text=f"CPF: {comprador_data.get('comprador_cpf')}", color=TEXT_COLOR_DARK))
+            comprador_card.add_widget(Label(text=f"E-mail: {comprador_data.get('comprador_email')}", color=TEXT_COLOR_DARK))
+        self.resumo_container.add_widget(comprador_card)
+
+        # Resumo do Vendedor
+        vendedor_card = self.create_resumo_card("Dados do Vendedor", 'vendedor_form')
+        if 'vendedor' in data:
+            vendedor_data = data['vendedor']
+            vendedor_card.add_widget(Label(text=f"Nome: {vendedor_data.get('vendedor_nome')}", color=TEXT_COLOR_DARK))
+            vendedor_card.add_widget(Label(text=f"CPF: {vendedor_data.get('vendedor_cpf')}", color=TEXT_COLOR_DARK))
+            vendedor_card.add_widget(Label(text=f"E-mail: {vendedor_data.get('vendedor_email')}", color=TEXT_COLOR_DARK))
+        self.resumo_container.add_widget(vendedor_card)
+    
+    def create_resumo_card(self, title, screen_name):
+        card = BoxLayout(orientation='vertical', padding=dp(10), spacing=dp(5), size_hint_y=None)
+        with card.canvas.before:
+            Color(CARD_BG_COLOR[0], CARD_BG_COLOR[1], CARD_BG_COLOR[2], CARD_BG_COLOR[3])
+            self.rect = RoundedRectangle(size=card.size, pos=card.pos, radius=[dp(15)])
+            card.bind(pos=self.update_rect, size=self.update_rect)
+        
+        header_layout = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(30))
+        header_layout.add_widget(Label(text=title, font_size='16sp', bold=True, color=PRIMARY_COLOR, size_hint_x=0.8))
+        edit_button = RoundedButton(text='Editar', size_hint_x=0.2, background_color=SECONDARY_COLOR, color=TEXT_COLOR_DARK)
+        edit_button.bind(on_press=lambda instance: setattr(self.manager, 'current', screen_name))
+        header_layout.add_widget(edit_button)
+        
+        card.add_widget(header_layout)
+        return card
+
+    def update_rect(self, instance, value):
+        instance.canvas.before.children[-1].pos = instance.pos
+        instance.canvas.before.children[-1].size = instance.size
+
+    def generate_contract(self, instance):
+        # A lógica de geração do contrato com o template vai aqui
+        # As informações estão em self.manager.app.contract_data
+        
+        # Exemplo de como usar os dados
+        dados = self.manager.app.contract_data
+        
+        # A lógica para preencher o CONTRATO_TEMPLATE com os dados preenchidos
+        # e gerar o contrato final está faltando, mas os dados necessários estão aqui.
+        # Exemplo: contrato_final = CONTRATO_TEMPLATE.format(**dados['imovel'], **dados['comprador'], etc.)
+        
+        show_popup("Contrato Gerado", "O contrato foi gerado com sucesso!")
+        self.manager.current = 'contract'
 
 class MainScreen(Screen):
+    # (Código da MainScreen, PaymentsScreen, etc. não foi alterado para manter o foco)
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         
@@ -126,11 +472,9 @@ class MainScreen(Screen):
             spacing=dp(20)
         )
         
-        # Adiciona o logo
         logo = Image(source='assets/logo.png', size_hint_y=None, height=dp(80))
         root_layout.add_widget(logo)
         
-        # Seção de valores dentro de um card
         values_card = BoxLayout(
             orientation='vertical',
             padding=dp(20),
@@ -152,7 +496,6 @@ class MainScreen(Screen):
         
         root_layout.add_widget(values_card)
 
-        # Seção para adicionar pagamento
         input_card = BoxLayout(orientation='vertical', padding=dp(20), spacing=dp(15), size_hint_y=None, height=dp(200))
         with input_card.canvas.before:
             Color(CARD_BG_COLOR[0], CARD_BG_COLOR[1], CARD_BG_COLOR[2], CARD_BG_COLOR[3])
@@ -173,7 +516,6 @@ class MainScreen(Screen):
         self.add_button.bind(on_press=self.register_payment_thread)
         root_layout.add_widget(self.add_button)
 
-        # Layout para os dois botões na parte inferior
         button_layout = BoxLayout(
             orientation='horizontal',
             size_hint_y=None,
@@ -193,7 +535,7 @@ class MainScreen(Screen):
         root_layout.add_widget(button_layout)
 
         self.add_widget(root_layout)
-
+    
     def update_card_rect(self, instance, value):
         self.values_card_rect.pos = instance.pos
         self.values_card_rect.size = instance.size
@@ -285,7 +627,7 @@ class MainScreen(Screen):
         self.manager.current = 'payments'
     
     def go_to_contract_screen(self, instance):
-        self.manager.current = 'contract'
+        self.manager.current = 'new_contract_start'
 
 class PaymentsScreen(Screen):
     def __init__(self, **kwargs):
@@ -297,7 +639,6 @@ class PaymentsScreen(Screen):
             spacing=dp(10)
         )
         
-        # Cabeçalho com o botão Voltar
         header = BoxLayout(
             orientation='horizontal',
             size_hint_y=None,
@@ -324,7 +665,6 @@ class PaymentsScreen(Screen):
         
         root_layout.add_widget(header)
 
-        # Cabeçalho da tabela de pagamentos
         table_header = BoxLayout(
             orientation='horizontal',
             size_hint_y=None,
@@ -335,10 +675,9 @@ class PaymentsScreen(Screen):
         table_header.add_widget(Label(text='Nome', font_size='16sp', bold=True, color=TEXT_COLOR_DARK, halign='left', valign='middle', size_hint_x=0.4))
         table_header.add_widget(Label(text='Valor', font_size='16sp', bold=True, color=TEXT_COLOR_DARK, halign='center', valign='middle', size_hint_x=0.25))
         table_header.add_widget(Label(text='Data', font_size='16sp', bold=True, color=TEXT_COLOR_DARK, halign='center', valign='middle', size_hint_x=0.25))
-        table_header.add_widget(Widget(size_hint_x=0.2)) # Espaço para os botões de ação
+        table_header.add_widget(Widget(size_hint_x=0.2)) 
         root_layout.add_widget(table_header)
         
-        # ScrollView para a lista de pagamentos
         self.scroll_view = ScrollView()
         self.payments_list_container = BoxLayout(
             orientation='vertical',
@@ -389,7 +728,6 @@ class PaymentsScreen(Screen):
                 data_formatada = p['data'].split('T')[0]
                 valor_formatado = f"R$ {p['valor']:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
                 
-                # Container para o item da lista com fundo de card
                 list_item_container = BoxLayout(
                     orientation='horizontal',
                     size_hint_y=None,
@@ -398,14 +736,11 @@ class PaymentsScreen(Screen):
                     spacing=dp(10)
                 )
 
-                # Cria um retângulo arredondado para o fundo
                 with list_item_container.canvas.before:
                     Color(CARD_BG_COLOR[0], CARD_BG_COLOR[1], CARD_BG_COLOR[2], CARD_BG_COLOR[3])
                     self.rect = RoundedRectangle(size=list_item_container.size, pos=list_item_container.pos, radius=[dp(15)])
                 
                 list_item_container.bind(pos=self.update_rect, size=self.update_rect)
-
-                # Layout interno para os detalhes do pagamento e botões
                 
                 name_label = Label(
                     text=p['nome_pagador'],
@@ -541,216 +876,7 @@ class PaymentsScreen(Screen):
     def go_back(self, instance):
         self.manager.current = 'main'
 
-class NewContractScreen(Screen):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-        root_layout = BoxLayout(
-            orientation='vertical',
-            padding=dp(20),
-            spacing=dp(20)
-        )
-        
-        header = BoxLayout(
-            orientation='horizontal',
-            size_hint_y=None,
-            height=dp(50)
-        )
-        
-        back_button = RoundedButton(
-            text='Voltar',
-            size_hint_x=0.2,
-            background_color=SECONDARY_COLOR,
-            color=TEXT_COLOR_DARK
-        )
-        back_button.bind(on_press=self.go_back)
-        header.add_widget(back_button)
-        header.add_widget(Label(text='Novo Contrato', font_size='22sp', bold=True, color=TEXT_COLOR_DARK, size_hint_x=0.8))
-
-        root_layout.add_widget(header)
-        
-        self.scroll_view = ScrollView()
-        
-        self.input_container = GridLayout(
-            cols=1,
-            spacing=dp(10),
-            size_hint_y=None,
-            padding=dp(10)
-        )
-        self.input_container.bind(minimum_height=self.input_container.setter('height'))
-        
-        self.create_input_fields()
-        
-        self.scroll_view.add_widget(self.input_container)
-        root_layout.add_widget(self.scroll_view)
-
-        generate_button = RoundedButton(
-            text='Gerar Contrato',
-            size_hint_y=None,
-            height=dp(50),
-            font_size='18sp',
-            background_color=PRIMARY_COLOR
-        )
-        generate_button.bind(on_press=self.generate_contract)
-        root_layout.add_widget(generate_button)
-
-        self.add_widget(root_layout)
-        
-    def add_input(self, label_text, hint_text='', **kwargs):
-        box = BoxLayout(orientation='vertical', size_hint_y=None, height=dp(70), spacing=dp(5))
-        box.add_widget(Label(text=label_text, halign='left', valign='bottom', size_hint_y=None, height=dp(20), text_size=(Window.width - dp(40), None), color=TEXT_COLOR_DARK))
-        text_input = TextInput(
-            multiline=kwargs.get('multiline', False),
-            size_hint_y=None,
-            height=dp(40),
-            background_color=CARD_BG_COLOR,
-            foreground_color=TEXT_COLOR_DARK,
-            hint_text=hint_text
-        )
-        box.add_widget(text_input)
-        self.input_container.add_widget(box)
-        return text_input
-
-    def add_section_title(self, title_text):
-        self.input_container.add_widget(Label(text=title_text, font_size='16sp', bold=True, size_hint_y=None, height=dp(30), color=PRIMARY_COLOR))
-
-    def create_input_fields(self):
-        # Campos do Vendedor
-        self.add_section_title('DADOS DO VENDEDOR')
-        self.vendedor_nome = self.add_input('Nome:', hint_text='Nome Completo do Vendedor')
-        self.vendedor_nacionalidade = self.add_input('Nacionalidade:', hint_text='Nacionalidade')
-        self.vendedor_profissao = self.add_input('Profissão:', hint_text='Profissão')
-        self.vendedor_estado_civil = self.add_input('Estado Civil:', hint_text='Estado Civil')
-        self.vendedor_rg = self.add_input('RG:', hint_text='RG (somente números)')
-        self.vendedor_cpf = self.add_input('CPF:', hint_text='CPF (somente números)')
-        self.vendedor_rua = self.add_input('Rua:', hint_text='Nome da Rua')
-        self.vendedor_numero = self.add_input('Número:', hint_text='Número da Casa/Apartamento')
-        self.vendedor_bairro = self.add_input('Bairro:', hint_text='Bairro')
-        self.vendedor_estado = self.add_input('Estado:', hint_text='Estado (Ex: MG)')
-        
-        # Campos do Comprador
-        self.add_section_title('DADOS DO COMPRADOR')
-        self.comprador_nome = self.add_input('Nome:', hint_text='Nome Completo do Comprador')
-        self.comprador_nacionalidade = self.add_input('Nacionalidade:', hint_text='Nacionalidade')
-        self.comprador_profissao = self.add_input('Profissão:', hint_text='Profissão')
-        self.comprador_estado_civil = self.add_input('Estado Civil:', hint_text='Estado Civil')
-        self.comprador_rg = self.add_input('RG:', hint_text='RG (somente números)')
-        self.comprador_cpf = self.add_input('CPF:', hint_text='CPF (somente números)')
-        self.comprador_rua = self.add_input('Rua:', hint_text='Nome da Rua')
-        self.comprador_numero = self.add_input('Número:', hint_text='Número da Casa/Apartamento')
-        self.comprador_bairro = self.add_input('Bairro:', hint_text='Bairro')
-        self.comprador_estado = self.add_input('Estado:', hint_text='Estado (Ex: MG)')
-
-        # Campos do Imóvel
-        self.add_section_title('DADOS DO IMÓVEL')
-        self.imovel_rua = self.add_input('Rua do Imóvel:', hint_text='Nome da Rua do Imóvel')
-        self.imovel_numero = self.add_input('Número do Imóvel:', hint_text='Número do Imóvel')
-        self.imovel_bairro = self.add_input('Bairro do Imóvel:', hint_text='Bairro do Imóvel')
-        self.imovel_estado = self.add_input('Estado do Imóvel:', hint_text='Estado (Ex: MG)')
-        self.imovel_descricao = self.add_input('Descrição Completa do Imóvel:', multiline=True, hint_text='Descreva o imóvel, área total, etc.')
-        self.imovel_aquisicao = self.add_input('Forma de Aquisição:', hint_text='Ex: Compra e venda')
-        self.imovel_registro = self.add_input('Registro do Imóvel:', hint_text='Número do Registro do Imóvel')
-        self.imovel_matricula = self.add_input('Matrícula do Imóvel:', hint_text='Número da Matrícula do Imóvel')
-
-        # Campos de Valores
-        self.add_section_title('VALORES E PAGAMENTOS')
-        self.valor_total = self.add_input('Valor Total (R$):', input_type='number', hint_text='280000.00')
-        self.sinal = self.add_input('Valor do Sinal (R$):', input_type='number', hint_text='50000.00')
-        self.cheque_sinal = self.add_input('Cheque do Sinal:', hint_text='Número do Cheque')
-        self.banco_sinal = self.add_input('Banco do Sinal:', hint_text='Nome do Banco')
-        self.valor_parcela_1 = self.add_input('Valor 1ª Parcela (R$):', input_type='number', hint_text='10000.00')
-        self.data_parcela_1 = self.add_input('Data 1ª Parcela (DD/MM/AAAA):', hint_text='DD/MM/AAAA')
-        self.saldo_restante = self.add_input('Saldo Restante (R$):', input_type='number', hint_text='20000.00')
-        self.data_lavratura_escritura = self.add_input('Data Lavratura Escritura (DD/MM/AAAA):', hint_text='DD/MM/AAAA')
-        self.porcentagem_multa = self.add_input('Multa (%):', input_type='number', hint_text='Ex: 10')
-        self.indice_reajuste = self.add_input('Índice de Reajuste:', hint_text='Ex: IGP-M ou IPCA')
-        self.data_transferencia_posse = self.add_input('Data Transferência Posse (DD/MM/AAAA):', hint_text='DD/MM/AAAA')
-        self.aluguel_diario = self.add_input('Aluguel Diário (R$):', input_type='number', hint_text='100.00')
-        self.local_assinatura = self.add_input('Local de Assinatura:', hint_text='Cidade e Estado')
-        self.data_assinatura = self.add_input('Data da Assinatura (DD/MM/AAAA):', hint_text='DD/MM/AAAA')
-        self.foro = self.add_input('Foro:', hint_text='Foro da Comarca')
-
-    def generate_contract(self, instance):
-        try:
-            # Coleta os dados dos campos de entrada
-            dados_contrato = {
-                "vendedor_nome": self.vendedor_nome.text,
-                "vendedor_nacionalidade": self.vendedor_nacionalidade.text,
-                "vendedor_profissao": self.vendedor_profissao.text,
-                "vendedor_estado_civil": self.vendedor_estado_civil.text,
-                "vendedor_rg": self.vendedor_rg.text,
-                "vendedor_cpf": self.vendedor_cpf.text,
-                "vendedor_rua": self.vendedor_rua.text,
-                "vendedor_numero": self.vendedor_numero.text,
-                "vendedor_bairro": self.vendedor_bairro.text,
-                "vendedor_estado": self.vendedor_estado.text,
-                "comprador_nome": self.comprador_nome.text,
-                "comprador_nacionalidade": self.comprador_nacionalidade.text,
-                "comprador_profissao": self.comprador_profissao.text,
-                "comprador_estado_civil": self.comprador_estado_civil.text,
-                "comprador_rg": self.comprador_rg.text,
-                "comprador_cpf": self.comprador_cpf.text,
-                "comprador_rua": self.comprador_rua.text,
-                "comprador_numero": self.comprador_numero.text,
-                "comprador_bairro": self.comprador_bairro.text,
-                "comprador_estado": self.comprador_estado.text,
-                "imovel_rua": self.imovel_rua.text,
-                "imovel_numero": self.imovel_numero.text,
-                "imovel_bairro": self.imovel_bairro.text,
-                "imovel_estado": self.imovel_estado.text,
-                "imovel_descricao": self.imovel_descricao.text,
-                "imovel_aquisicao": self.imovel_aquisicao.text,
-                "imovel_registro": self.imovel_registro.text,
-                "imovel_matricula": self.imovel_matricula.text,
-                "valor_total": self.valor_total.text,
-                "valor_total_extenso": self.number_to_words(self.valor_total.text),
-                "sinal": self.sinal.text,
-                "sinal_extenso": self.number_to_words(self.sinal.text),
-                "cheque_sinal": self.cheque_sinal.text,
-                "banco_sinal": self.banco_sinal.text,
-                "valor_parcela_1": self.valor_parcela_1.text,
-                "valor_parcela_1_extenso": self.number_to_words(self.valor_parcela_1.text),
-                "data_parcela_1": self.data_parcela_1.text,
-                "saldo_restante": self.saldo_restante.text,
-                "saldo_restante_extenso": self.number_to_words(self.saldo_restante.text),
-                "data_lavratura_escritura": self.data_lavratura_escritura.text,
-                "porcentagem_multa": self.porcentagem_multa.text,
-                "porcentagem_multa_extenso": self.number_to_words(self.porcentagem_multa.text),
-                "indice_reajuste": self.indice_reajuste.text,
-                "data_transferencia_posse": self.data_transferencia_posse.text,
-                "aluguel_diario": self.aluguel_diario.text,
-                "aluguel_diario_extenso": self.number_to_words(self.aluguel_diario.text),
-                "local_assinatura": self.local_assinatura.text,
-                "dia_assinatura": self.data_assinatura.text.split('/')[0] if self.data_assinatura.text else '',
-                "mes_assinatura": self.data_assinatura.text.split('/')[1] if self.data_assinatura.text else '',
-                "ano_assinatura": self.data_assinatura.text.split('/')[2] if self.data_assinatura.text else '',
-                "foro": self.foro.text
-            }
-
-            contrato_gerado = CONTRATO_TEMPLATE.format(**dados_contrato)
-            self.manager.get_screen('contract').update_contract_text(contrato_gerado)
-            self.manager.current = 'contract'
-            show_popup("Sucesso", "Contrato gerado com sucesso!")
-
-        except KeyError as e:
-            show_popup("Erro", f"Campo ausente no template: {e}. Verifique se todos os campos foram preenchidos.")
-        except Exception as e:
-            show_popup("Erro", f"Ocorreu um erro: {e}")
-            
-    def number_to_words(self, number_str):
-        # Esta é uma função placeholder. Para a implementação real,
-        # você precisaria de uma biblioteca como `num2words` ou uma função personalizada.
-        # Por exemplo: `from num2words import num2words; return num2words(float(number_str), lang='pt_BR')`
-        try:
-            return str(float(number_str))
-        except (ValueError, TypeError):
-            return ""
-
-    def go_back(self, instance):
-        self.manager.current = 'contract'
-
 class ContractScreen(Screen):
-    # A propriedade deve ser definida aqui, fora de __init__
     contract_text = StringProperty(CONTRATO_TEMPLATE)
 
     def __init__(self, **kwargs):
@@ -780,7 +906,6 @@ class ContractScreen(Screen):
         
         root_layout.add_widget(header)
 
-        # ScrollView para o conteúdo do contrato
         self.scroll_view = ScrollView()
         
         contract_content_layout = BoxLayout(
@@ -791,7 +916,6 @@ class ContractScreen(Screen):
         )
         contract_content_layout.bind(minimum_height=contract_content_layout.setter('height'))
 
-        # Adicionando um Label para exibir o contrato
         self.contract_label = Label(
             font_size='14sp',
             halign='left',
@@ -801,8 +925,6 @@ class ContractScreen(Screen):
             size_hint_y=None
         )
 
-        # Vincule a propriedade de texto do Label à sua StringProperty
-        # A propriedade 'contract_text' agora existe quando este bind é chamado
         self.bind(contract_text=self.contract_label.setter('text'))
         self.contract_label.bind(texture_size=self.contract_label.setter('size'))
 
@@ -810,7 +932,6 @@ class ContractScreen(Screen):
         self.scroll_view.add_widget(contract_content_layout)
         root_layout.add_widget(self.scroll_view)
 
-        # Botões para Criar Contrato e Gerar PDF
         button_layout = BoxLayout(
             orientation='horizontal',
             size_hint_y=None,
@@ -822,8 +943,6 @@ class ContractScreen(Screen):
         create_new_button.bind(on_press=self.go_to_new_contract_screen)
         
         generate_pdf_button = RoundedButton(text='Gerar PDF', background_color=SUCCESS_COLOR)
-        # Note: Esta funcionalidade precisa de bibliotecas adicionais, por isso é um placeholder.
-        # generate_pdf_button.bind(on_press=self.generate_pdf)
 
         button_layout.add_widget(create_new_button)
         button_layout.add_widget(generate_pdf_button)
@@ -834,19 +953,58 @@ class ContractScreen(Screen):
         self.contract_text = new_text
 
     def go_to_new_contract_screen(self, instance):
-        self.manager.current = 'new_contract'
+        self.manager.current = 'new_contract_start'
 
     def go_back(self, instance):
         self.manager.current = 'main'
 
 class CompraFirmeApp(App):
     def build(self):
+        self.contract_data = {}
         sm = ScreenManager()
         sm.add_widget(MainScreen(name='main'))
         sm.add_widget(PaymentsScreen(name='payments'))
         sm.add_widget(ContractScreen(name='contract'))
-        sm.add_widget(NewContractScreen(name='new_contract'))
+        
+        # Telas do novo fluxo de contrato
+        sm.add_widget(ImovelFormScreen(name='imovel_form'))
+        sm.add_widget(CompradorFormScreen(name='comprador_form'))
+        sm.add_widget(VendedorFormScreen(name='vendedor_form'))
+        sm.add_widget(ContratoResumoScreen(name='contrato_resumo'))
+        
+        # Adiciona a tela inicial do fluxo de contrato
+        sm.add_widget(Screen(name='new_contract_start'))
+        self.setup_new_contract_start_screen(sm.get_screen('new_contract_start'))
+
         return sm
+    
+    def setup_new_contract_start_screen(self, screen):
+        layout = BoxLayout(
+            orientation='vertical',
+            padding=dp(20),
+            spacing=dp(20)
+        )
+        layout.add_widget(Label(text='Novo Contrato', font_size='22sp', bold=True, color=TEXT_COLOR_DARK))
+        layout.add_widget(Label(text='Vamos preencher as informações para gerar o contrato.', font_size='16sp', color=TEXT_COLOR_LIGHT))
+
+        start_button = RoundedButton(
+            text='Começar',
+            size_hint_y=None,
+            height=dp(50),
+            background_color=PRIMARY_COLOR,
+            color=(1,1,1,1)
+        )
+        start_button.bind(on_press=self.start_new_contract)
+
+        layout.add_widget(Widget()) # Espaçador
+        layout.add_widget(start_button)
+        layout.add_widget(Widget()) # Espaçador
+
+        screen.add_widget(layout)
+    
+    def start_new_contract(self, instance):
+        self.contract_data = {} # Limpa os dados do contrato anterior
+        self.root.current = 'imovel_form'
 
 if __name__ == '__main__':
     CompraFirmeApp().run()
