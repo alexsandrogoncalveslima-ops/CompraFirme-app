@@ -131,6 +131,50 @@ class MainScreen(Screen):
     def go_to_payments_screen(self, instance):
         self.manager.current = 'payments'
 
+class EditPaymentPopup(Popup):
+    def __init__(self, payment_id, current_nome, current_valor, on_edit_callback, **kwargs):
+        super().__init__(**kwargs)
+        self.payment_id = payment_id
+        self.on_edit_callback = on_edit_callback
+        
+        layout = BoxLayout(orientation='vertical', padding=dp(10), spacing=dp(10))
+        layout.add_widget(Label(text='Editar Pagamento', font_size='20sp'))
+        
+        self.name_input = TextInput(text=current_nome, multiline=False, hint_text='Nome do Pagador', size_hint_y=None, height=dp(35))
+        layout.add_widget(self.name_input)
+        
+        self.value_input = TextInput(text=str(current_valor), multiline=False, hint_text='Valor', input_type='number', size_hint_y=None, height=dp(35))
+        layout.add_widget(self.value_input)
+        
+        self.password_input = TextInput(password=True, multiline=False, hint_text='Senha de Administrador', size_hint_y=None, height=dp(35))
+        layout.add_widget(self.password_input)
+        
+        btn_layout = BoxLayout(size_hint_y=None, height=dp(40), spacing=dp(10))
+        cancel_btn = Button(text='Cancelar')
+        confirm_btn = Button(text='Confirmar Edição')
+        
+        btn_layout.add_widget(cancel_btn)
+        btn_layout.add_widget(confirm_btn)
+        layout.add_widget(btn_layout)
+        
+        self.content = layout
+        self.title = 'Editar Pagamento'
+        self.size_hint = (0.9, 0.6)
+        self.auto_dismiss = False
+        
+        def dismiss_popup(instance):
+            self.dismiss()
+        
+        def confirm_edit(instance):
+            new_nome = self.name_input.text
+            new_valor = self.value_input.text
+            password = self.password_input.text
+            self.on_edit_callback(self.payment_id, new_nome, new_valor, password)
+            self.dismiss()
+
+        cancel_btn.bind(on_press=dismiss_popup)
+        confirm_btn.bind(on_press=confirm_edit)
+
 class PaymentsScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -182,18 +226,46 @@ class PaymentsScreen(Screen):
                 # Item da lista com botões
                 payment_item = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(40), padding=dp(5), spacing=dp(5))
                 payment_item.add_widget(Label(text=p['nome_pagador'], size_hint_x=0.4))
-                payment_item.add_widget(Label(text=valor_formatado, size_hint_x=0.3))
+                payment_item.add_widget(Label(text=valor_formatado, size_hint_x=0.25))
                 payment_item.add_widget(Label(text=data_formatada, size_hint_x=0.2))
+
+                # Botão de Editar
+                edit_btn = Button(text='E', size_hint_x=0.075, background_color=(0, 0.5, 1, 1))
+                edit_btn.bind(on_press=lambda btn, p_id=p['id'], p_nome=p['nome_pagador'], p_valor=p['valor']: self.show_edit_popup(p_id, p_nome, p_valor))
+                payment_item.add_widget(edit_btn)
                 
                 # Botão de Excluir
-                delete_btn = Button(text='X', size_hint_x=0.1, background_color=(1, 0, 0, 1))
+                delete_btn = Button(text='X', size_hint_x=0.075, background_color=(1, 0, 0, 1))
                 delete_btn.bind(on_press=lambda btn, id=p['id']: self.show_admin_password_popup(id))
                 payment_item.add_widget(delete_btn)
                 
                 self.payments_list_container.add_widget(payment_item)
     
+    def show_edit_popup(self, payment_id, nome, valor):
+        popup = EditPaymentPopup(payment_id, nome, valor, self.edit_payment_thread)
+        popup.open()
+
+    def edit_payment_thread(self, payment_id, new_nome, new_valor, password):
+        Thread(target=self.edit_payment, args=(payment_id, new_nome, new_valor, password)).start()
+
+    def edit_payment(self, payment_id, new_nome, new_valor, password):
+        try:
+            headers = {'Admin-Password': password}
+            payload = {'nome_pagador': new_nome, 'valor': float(new_valor)}
+            response = requests.put(f"{SERVER_URL}/edit_payment/{payment_id}", json=payload, headers=headers)
+            
+            if response.status_code == 200:
+                self.load_payments()
+                self.add_message_on_main_thread("Pagamento editado com sucesso!")
+                self.manager.get_screen('main').update_values_thread()
+            else:
+                self.add_message_on_main_thread(f"Erro ao editar: {response.json().get('error', 'Erro desconhecido')}")
+        except requests.exceptions.RequestException:
+            self.add_message_on_main_thread("Erro de conexão ao editar.")
+        except ValueError:
+            self.add_message_on_main_thread("Valor inválido. Use um número.")
+    
     def show_admin_password_popup(self, payment_id):
-        # Layout do popup
         popup_layout = BoxLayout(orientation='vertical', padding=dp(10), spacing=dp(10))
         
         popup_layout.add_widget(Label(text='Insira a senha de administrador para excluir:', font_size='16sp'))
@@ -243,7 +315,6 @@ class PaymentsScreen(Screen):
 
     @mainthread
     def add_message_on_main_thread(self, message):
-        # Implementação para exibir mensagens na tela de pagamentos
         popup = Popup(title='Status', content=Label(text=message), size_hint=(0.8, 0.2))
         popup.open()
             

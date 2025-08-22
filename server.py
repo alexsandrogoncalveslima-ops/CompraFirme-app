@@ -65,10 +65,8 @@ def get_payments():
         })
     return jsonify(pagamentos_list), 200
 
-# NOVO ENDPOINT: Rota para excluir um pagamento
 @app.route('/delete_payment/<int:payment_id>', methods=['DELETE'])
 def delete_payment(payment_id):
-    # Verificação de senha de administrador (simples e temporária)
     admin_password = request.headers.get('Admin-Password')
     if admin_password != "admin123":
         return jsonify({"error": "Acesso negado. Senha de administrador incorreta."}), 401
@@ -84,7 +82,32 @@ def delete_payment(payment_id):
     conn.commit()
     return jsonify({"message": "Pagamento excluído com sucesso!"}), 200
 
-# Endpoint de login mantido para referência futura, mas não usado pelo app
+# NOVO ENDPOINT: Rota para editar um pagamento
+@app.route('/edit_payment/<int:payment_id>', methods=['PUT'])
+def edit_payment(payment_id):
+    admin_password = request.headers.get('Admin-Password')
+    if admin_password != "admin123":
+        return jsonify({"error": "Acesso negado. Senha de administrador incorreta."}), 401
+    
+    data = request.get_json()
+    new_nome_pagador = data.get('nome_pagador')
+    new_valor = data.get('valor')
+    
+    if not new_nome_pagador or not new_valor:
+        return jsonify({"error": "Dados de pagamento incompletos."}), 400
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT COUNT(*) FROM pagamentos WHERE id = ?", (payment_id,))
+    if cursor.fetchone()[0] == 0:
+        return jsonify({"error": "Pagamento não encontrado."}), 404
+
+    cursor.execute("UPDATE pagamentos SET nome_pagador = ?, valor = ?, data = datetime('now') WHERE id = ?", 
+                   (new_nome_pagador, new_valor, payment_id))
+    conn.commit()
+    return jsonify({"message": "Pagamento editado com sucesso!"}), 200
+
 @app.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
