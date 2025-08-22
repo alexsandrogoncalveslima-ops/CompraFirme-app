@@ -223,6 +223,20 @@ class MainScreen(Screen):
     def go_to_payments_screen(self, instance):
         self.manager.current = 'payments'
 
+class PaymentCard(FloatLayout):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        
+        with self.canvas.before:
+            Color(CARD_BG_COLOR[0], CARD_BG_COLOR[1], CARD_BG_COLOR[2], CARD_BG_COLOR[3])
+            self.bg_rect = RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(15)])
+        
+        self.bind(pos=self.update_bg_rect, size=self.update_bg_rect)
+    
+    def update_bg_rect(self, *args):
+        self.bg_rect.pos = self.pos
+        self.bg_rect.size = self.size
+
 class PaymentsScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -327,11 +341,7 @@ class PaymentsScreen(Screen):
                 valor_formatado = f"R$ {p['valor']:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
                 
                 # Container para o item da lista com fundo de card
-                list_item_container = FloatLayout(size_hint_y=None, height=dp(80))
-                with list_item_container.canvas.before:
-                    Color(CARD_BG_COLOR[0], CARD_BG_COLOR[1], CARD_BG_COLOR[2], CARD_BG_COLOR[3])
-                    self.item_rect = RoundedRectangle(size=list_item_container.size, pos=list_item_container.pos, radius=[dp(15)])
-                list_item_container.bind(pos=self.update_item_rect, size=self.update_item_rect)
+                list_item_container = PaymentCard(size_hint_y=None, height=dp(80))
                 
                 # Layout interno para os detalhes do pagamento e botões
                 content_layout = BoxLayout(
@@ -348,6 +358,7 @@ class PaymentsScreen(Screen):
                     color=TEXT_COLOR_DARK,
                     halign='left',
                     valign='middle',
+                    size_hint_x=0.4,
                     text_size=(self.payments_list_container.width * 0.4 - dp(30), None)
                 )
                 value_label = Label(
@@ -392,10 +403,6 @@ class PaymentsScreen(Screen):
                 
                 list_item_container.add_widget(content_layout)
                 self.payments_list_container.add_widget(list_item_container)
-    
-    def update_item_rect(self, instance, value):
-        instance.canvas.before.children[0].pos = instance.pos
-        instance.canvas.before.children[0].size = instance.size
 
     def show_edit_popup(self, payment_id, nome, valor):
         popup = EditPaymentPopup(payment_id, nome, valor, self.edit_payment_thread)
