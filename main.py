@@ -599,15 +599,20 @@ class NewContractScreen(Screen):
         
     def add_input(self, label_text, **kwargs):
         box = BoxLayout(orientation='vertical', size_hint_y=None, height=dp(70), spacing=dp(5))
-        box.add_widget(Label(text=label_text, halign='left', valign='middle', size_hint_y=None, height=dp(20)))
-        text_input = TextInput(multiline=kwargs.get('multiline', False), size_hint_y=None, height=dp(40))
+        # Ajustado para alinhar o texto do Label à esquerda
+        box.add_widget(Label(text=label_text, halign='left', valign='bottom', size_hint_y=None, height=dp(20), text_size=(Window.width - dp(40), None), color=TEXT_COLOR_DARK))
+        text_input = TextInput(multiline=kwargs.get('multiline', False), size_hint_y=None, height=dp(40), background_color=CARD_BG_COLOR, foreground_color=TEXT_COLOR_DARK, hint_text=label_text)
         box.add_widget(text_input)
         self.input_container.add_widget(box)
         return text_input
 
+    def add_section_title(self, title_text):
+        self.input_container.add_widget(Label(text=title_text, font_size='16sp', bold=True, size_hint_y=None, height=dp(30), color=PRIMARY_COLOR))
+
+
     def create_input_fields(self):
         # Campos do Vendedor
-        self.input_container.add_widget(Label(text='DADOS DO VENDEDOR', font_size='16sp', bold=True, size_hint_y=None, height=dp(30), color=PRIMARY_COLOR))
+        self.add_section_title('DADOS DO VENDEDOR')
         self.vendedor_nome = self.add_input('Nome:')
         self.vendedor_nacionalidade = self.add_input('Nacionalidade:')
         self.vendedor_profissao = self.add_input('Profissão:')
@@ -620,7 +625,7 @@ class NewContractScreen(Screen):
         self.vendedor_estado = self.add_input('Estado:')
         
         # Campos do Comprador
-        self.input_container.add_widget(Label(text='DADOS DO COMPRADOR', font_size='16sp', bold=True, size_hint_y=None, height=dp(30), color=PRIMARY_COLOR))
+        self.add_section_title('DADOS DO COMPRADOR')
         self.comprador_nome = self.add_input('Nome:')
         self.comprador_nacionalidade = self.add_input('Nacionalidade:')
         self.comprador_profissao = self.add_input('Profissão:')
@@ -633,7 +638,7 @@ class NewContractScreen(Screen):
         self.comprador_estado = self.add_input('Estado:')
 
         # Campos do Imóvel
-        self.input_container.add_widget(Label(text='DADOS DO IMÓVEL', font_size='16sp', bold=True, size_hint_y=None, height=dp(30), color=PRIMARY_COLOR))
+        self.add_section_title('DADOS DO IMÓVEL')
         self.imovel_rua = self.add_input('Rua do Imóvel:')
         self.imovel_numero = self.add_input('Número do Imóvel:')
         self.imovel_bairro = self.add_input('Bairro do Imóvel:')
@@ -644,7 +649,7 @@ class NewContractScreen(Screen):
         self.imovel_matricula = self.add_input('Matrícula do Imóvel:')
 
         # Campos de Valores
-        self.input_container.add_widget(Label(text='VALORES E PAGAMENTOS', font_size='16sp', bold=True, size_hint_y=None, height=dp(30), color=PRIMARY_COLOR))
+        self.add_section_title('VALORES E PAGAMENTOS')
         self.valor_total = self.add_input('Valor Total (R$):', input_type='number')
         self.sinal = self.add_input('Valor do Sinal (R$):', input_type='number')
         self.cheque_sinal = self.add_input('Cheque do Sinal:')
