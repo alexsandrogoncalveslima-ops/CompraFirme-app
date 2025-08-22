@@ -263,10 +263,11 @@ class PaymentsScreen(Screen):
             padding=(dp(15), 0),
             spacing=dp(10)
         )
-        header_layout.add_widget(Label(text='Nome', font_size='16sp', bold=True, color=TEXT_COLOR_DARK, size_hint_x=0.4))
-        header_layout.add_widget(Label(text='Valor', font_size='16sp', bold=True, color=TEXT_COLOR_DARK, size_hint_x=0.3, halign='right'))
-        header_layout.add_widget(Label(text='Data', font_size='16sp', bold=True, color=TEXT_COLOR_DARK, size_hint_x=0.3, halign='right'))
-        header_layout.add_widget(Widget(size_hint_x=0.2)) # Espaço para os botões E e X
+        header_layout.add_widget(Label(text='Nome', font_size='16sp', bold=True, color=TEXT_COLOR_DARK, size_hint_x=0.4, halign='left', valign='middle'))
+        header_layout.add_widget(Label(text='Valor', font_size='16sp', bold=True, color=TEXT_COLOR_DARK, size_hint_x=0.3, halign='right', valign='middle'))
+        header_layout.add_widget(Label(text='Data', font_size='16sp', bold=True, color=TEXT_COLOR_DARK, size_hint_x=0.3, halign='right', valign='middle'))
+        # Adiciona um widget invisível para manter o alinhamento com os botões
+        header_layout.add_widget(Widget(size_hint_x=0.2)) 
         root_layout.add_widget(header_layout)
 
         self.scroll_view = ScrollView()
@@ -319,38 +320,42 @@ class PaymentsScreen(Screen):
                 data_formatada = p['data'].split('T')[0]
                 valor_formatado = f"R$ {p['valor']:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
                 
-                # Card para cada pagamento
-                payment_card = FloatLayout(size_hint_y=None, height=dp(90))
-                with payment_card.canvas.before:
+                # Container para o item da lista
+                list_item_container = BoxLayout(
+                    orientation='horizontal',
+                    size_hint_y=None,
+                    height=dp(60),
+                    padding=dp(15),
+                    spacing=dp(10)
+                )
+
+                # Cria um retângulo arredondado para o fundo
+                with list_item_container.canvas.before:
                     Color(CARD_BG_COLOR[0], CARD_BG_COLOR[1], CARD_BG_COLOR[2], CARD_BG_COLOR[3])
-                    RoundedRectangle(size=payment_card.size, pos=payment_card.pos, radius=[dp(15)])
+                    RoundedRectangle(size=list_item_container.size, pos=list_item_container.pos, radius=[dp(15)])
+
+                # Layout interno para os detalhes do pagamento
+                details_layout = BoxLayout(orientation='vertical', size_hint_x=0.8)
+                details_layout.add_widget(Label(text=p['nome_pagador'], font_size='16sp', bold=True, color=TEXT_COLOR_DARK, halign='left', valign='middle', text_size=(list_item_container.width * 0.4, None)))
+                details_layout.add_widget(Label(text=f"Valor: {valor_formatado}", font_size='14sp', color=TEXT_COLOR_LIGHT, halign='left', valign='middle', text_size=(list_item_container.width * 0.4, None)))
+                details_layout.add_widget(Label(text=f"Data: {data_formatada}", font_size='14sp', color=TEXT_COLOR_LIGHT, halign='left', valign='middle', text_size=(list_item_container.width * 0.4, None)))
                 
-                # Layout interno do card
-                content_layout = BoxLayout(orientation='vertical', padding=(dp(10), dp(8)), spacing=dp(3))
+                # Layout para os botões de ação
+                buttons_layout = BoxLayout(orientation='horizontal', size_hint_x=0.2, spacing=dp(5))
                 
-                # Layout superior do card (Nome e Valor)
-                top_row = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(30))
-                top_row.add_widget(Label(text=p['nome_pagador'], font_size='18sp', bold=True, color=TEXT_COLOR_DARK, size_hint_x=0.6))
-                top_row.add_widget(Label(text=valor_formatado, font_size='16sp', bold=True, color=SUCCESS_COLOR, size_hint_x=0.4, halign='right'))
-                content_layout.add_widget(top_row)
-                
-                # Layout inferior do card (Data e Botões de Ação)
-                bottom_row = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(30), spacing=dp(10))
-                bottom_row.add_widget(Label(text=f"Data: {data_formatada}", font_size='14sp', color=TEXT_COLOR_LIGHT, size_hint_x=0.8, halign='left'))
-                
-                edit_btn = Button(text='E', size_hint_x=0.1, background_color=PRIMARY_COLOR, color=(1,1,1,1))
+                edit_btn = Button(text='E', size_hint=(0.5, 1), background_color=PRIMARY_COLOR, color=(1,1,1,1))
                 edit_btn.bind(on_press=lambda btn, p_id=p['id'], p_nome=p['nome_pagador'], p_valor=p['valor']: self.show_edit_popup(p_id, p_nome, p_valor))
                 
-                delete_btn = Button(text='X', size_hint_x=0.1, background_color=ACCENT_COLOR, color=(1,1,1,1))
+                delete_btn = Button(text='X', size_hint=(0.5, 1), background_color=ACCENT_COLOR, color=(1,1,1,1))
                 delete_btn.bind(on_press=lambda btn, id=p['id']: self.show_admin_password_popup(id))
                 
-                bottom_row.add_widget(edit_btn)
-                bottom_row.add_widget(delete_btn)
+                buttons_layout.add_widget(edit_btn)
+                buttons_layout.add_widget(delete_btn)
                 
-                content_layout.add_widget(bottom_row)
+                list_item_container.add_widget(details_layout)
+                list_item_container.add_widget(buttons_layout)
                 
-                payment_card.add_widget(content_layout)
-                self.payments_list_container.add_widget(payment_card)
+                self.payments_list_container.add_widget(list_item_container)
     
     def show_edit_popup(self, payment_id, nome, valor):
         popup = EditPaymentPopup(payment_id, nome, valor, self.edit_payment_thread)
