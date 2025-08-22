@@ -110,8 +110,8 @@ class MainScreen(Screen):
         input_card = BoxLayout(orientation='vertical', padding=dp(20), spacing=dp(15), size_hint_y=None, height=dp(200))
         with input_card.canvas.before:
             Color(CARD_BG_COLOR[0], CARD_BG_COLOR[1], CARD_BG_COLOR[2], CARD_BG_COLOR[3])
-            RoundedRectangle(size=input_card.size, pos=input_card.pos, radius=[dp(15)])
-            input_card.bind(pos=lambda *a: self.update_card_rect(input_card, *a), size=lambda *a: self.update_card_rect(input_card, *a))
+            self.input_card_rect = RoundedRectangle(size=input_card.size, pos=input_card.pos, radius=[dp(15)])
+            input_card.bind(pos=self.update_input_card_rect, size=self.update_input_card_rect)
 
         input_card.add_widget(Label(text='ADICIONAR NOVO PAGAMENTO', font_size='16sp', bold=True, color=TEXT_COLOR_DARK))
         
@@ -134,8 +134,12 @@ class MainScreen(Screen):
         self.add_widget(root_layout)
 
     def update_card_rect(self, instance, value):
-        instance.canvas.before.children[1].pos = instance.pos
-        instance.canvas.before.children[1].size = instance.size
+        self.values_card_rect.pos = instance.pos
+        self.values_card_rect.size = instance.size
+        
+    def update_input_card_rect(self, instance, value):
+        self.input_card_rect.pos = instance.pos
+        self.input_card_rect.size = instance.size
 
     def on_enter(self, *args):
         self.update_values_thread()
