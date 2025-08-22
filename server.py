@@ -1,98 +1,118 @@
-from flask import Flask, request, jsonify, g
 import os
-from database import get_connection, create_tables, add_admin_user
+import sqlite3
+from flask import Flask, jsonify, request
 import bcrypt
+from datetime import datetime
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'uma_chave_secreta_padrao')
+
+# Configuração do banco de dados
+DATABASE = 'comprada_imovel.db'
+ADMIN_PASSWORD_HASH = os.environ.get('ADMIN_PASSWORD_HASH')
 
 def get_db():
-    db = getattr(g, '_database', None)
-    if db is None:
-        db = g._database = get_connection()
-    return db
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    return conn
 
-@app.teardown_appcontext
-def close_connection(exception):
-    db = getattr(g, '_database', None)
-    if db is not None:
-        db.close()
-
-# --- ROTAS DA API ---
+def init_db():
+    with get_db() as conn:
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS pagamentos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nome_pagador TEXT NOT NULL,
+                valor REAL NOT NULL,
+                data TEXT NOT NULL
+            )
+        ''')
 
 @app.route('/add_payment', methods=['POST'])
 def add_payment():
-    data = request.get_json()
-    nome_pagador = data.get('nome_pagador')
-    valor = data.get('valor')
-    if not nome_pagador or not valor:
-        return jsonify({"error": "Dados de pagamento incompletos"}), 400
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO pagamentos (nome_pagador, valor) VALUES (%s, %s)",
-                   (nome_pagador, valor))
-    conn.commit()
-    return jsonify({"message": "Pagamento registrado com sucesso!"}), 201
-
-@app.route('/total_paid', methods=['GET'])
-def get_total_paid():
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT SUM(valor) FROM pagamentos")
-    total = cursor.fetchone()[0]
-    return jsonify({"total": float(total) if total is not None else 0}), 200
+    try:
+        data = request.json
+        nome = data['nome_pagador']
+        valor = float(data['valor'])
+        
+        with get_db() as conn:
+            conn.execute('INSERT INTO pagamentos (nome_pagador, valor, data) VALUES (?, ?, ?)', (nome, valor, datetime.now().isoformat()))
+            conn.commit()
+            
+        return jsonify({"message": "Pagamento adicionado com sucesso!"}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/payments', methods=['GET'])
 def get_payments():
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, nome_pagador, valor, data FROM pagamentos ORDER BY data DESC")
-    pagamentos = cursor.fetchall()
-    pagamentos_list = []
-    for p in pagamentos:
-        pagamentos_list.append({
-            "id": p[0],
-            "nome_pagador": p[1],
-            "valor": float(p[2]),
-            "data": p[3].isoformat()
-        })
-    return jsonify(pagamentos_list), 200
+    try:
+        with get_db() as conn:
+            pagamentos = conn.execute('SELECT * FROM pagamentos ORDER BY data DESC').fetchall()
+            
+            # Converte as linhas do banco de dados em uma lista de dicionários
+            pagamentos_list = []
+            for p in pagamentos:
+                pagamentos_list.append({
+                    "id": p["id"],
+                    "nome_pagador": p["nome_pagador"],
+                    "valor": p["valor"],
+                    "data": datetime.fromisoformat(p["data"]).isoformat()
+                })
+            
+            return jsonify(pagamentos_list), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-@app.route('/delete_payment/<int:payment_id>', methods=['DELETE'])
-def delete_payment(payment_id):
-    admin_password = request.headers.get('Admin-Password')
-    if admin_password != "admin123":
-        return jsonify({"error": "Acesso negado. Senha de administrador incorreta."}), 401
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) FROM pagamentos WHERE id = %s", (payment_id,))
-    if cursor.fetchone()[0] == 0:
-        return jsonify({"error": "Pagamento não encontrado."}), 404
-    cursor.execute("DELETE FROM pagamentos WHERE id = %s", (payment_id,))
-    conn.commit()
-    return jsonify({"message": "Pagamento excluído com sucesso!"}), 200
+@app.route('/total_paid', methods=['GET'])
+def get_total_paid():
+    try:
+        with get_db() as conn:
+            total = conn.execute('SELECT SUM(valor) FROM pagamentos').fetchone()[0]
+            if total is None:
+                total = 0
+            
+            return jsonify({"total": total}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/edit_payment/<int:payment_id>', methods=['PUT'])
 def edit_payment(payment_id):
-    admin_password = request.headers.get('Admin-Password')
-    if admin_password != "admin123":
-        return jsonify({"error": "Acesso negado. Senha de administrador incorreta."}), 401
-    data = request.get_json()
-    new_nome_pagador = data.get('nome_pagador')
-    new_valor = data.get('valor')
-    if not new_nome_pagador or not new_valor:
-        return jsonify({"error": "Dados de pagamento incompletos."}), 400
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) FROM pagamentos WHERE id = %s", (payment_id,))
-    if cursor.fetchone()[0] == 0:
-        return jsonify({"error": "Pagamento não encontrado."}), 404
-    cursor.execute("UPDATE pagamentos SET nome_pagador = %s, valor = %s, data = CURRENT_TIMESTAMP WHERE id = %s", 
-                   (new_nome_pagador, new_valor, payment_id))
-    conn.commit()
-    return jsonify({"message": "Pagamento editado com sucesso!"}), 200
+    try:
+        if not ADMIN_PASSWORD_HASH:
+            return jsonify({"error": "Admin password not set."}), 403
+
+        password = request.headers.get('Admin-Password')
+        if not bcrypt.checkpw(password.encode('utf-8'), ADMIN_PASSWORD_HASH.encode('utf-8')):
+            return jsonify({"error": "Unauthorized."}), 401
+
+        data = request.json
+        nome = data.get('nome_pagador')
+        valor = float(data.get('valor'))
+        
+        with get_db() as conn:
+            conn.execute('UPDATE pagamentos SET nome_pagador = ?, valor = ? WHERE id = ?', (nome, valor, payment_id))
+            conn.commit()
+            
+        return jsonify({"message": "Pagamento editado com sucesso!"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/delete_payment/<int:payment_id>', methods=['DELETE'])
+def delete_payment(payment_id):
+    try:
+        if not ADMIN_PASSWORD_HASH:
+            return jsonify({"error": "Admin password not set."}), 403
+
+        password = request.headers.get('Admin-Password')
+        if not bcrypt.checkpw(password.encode('utf-8'), ADMIN_PASSWORD_HASH.encode('utf-8')):
+            return jsonify({"error": "Unauthorized."}), 401
+
+        with get_db() as conn:
+            conn.execute('DELETE FROM pagamentos WHERE id = ?', (payment_id,))
+            conn.commit()
+            
+        return jsonify({"message": "Pagamento excluído com sucesso!"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    create_tables()
-    add_admin_user()
-    app.run(host='0.0.0.0', port=10000)
+    init_db()
+    app.run(debug=True)
