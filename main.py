@@ -542,7 +542,6 @@ class PaymentsScreen(Screen):
     def go_back(self, instance):
         self.manager.current = 'main'
 
-# Nova tela para criar o contrato
 class NewContractScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -784,7 +783,6 @@ class ContractScreen(Screen):
 
         # Adicionando um Label para exibir o contrato
         self.contract_label = Label(
-            text=self.contract_text,
             font_size='14sp',
             halign='left',
             valign='top',
@@ -792,7 +790,12 @@ class ContractScreen(Screen):
             text_size=(Window.width - dp(40), None),
             size_hint_y=None
         )
+
+        # Vincule a propriedade de texto do Label à sua StringProperty
         self.contract_label.bind(texture_size=self.contract_label.setter('size'))
+        self.contract_label.bind(text=self.contract_label.setter('text'))
+        self.bind(contract_text=self.contract_label.setter('text'))
+
         contract_content_layout.add_widget(self.contract_label)
         self.scroll_view.add_widget(contract_content_layout)
         root_layout.add_widget(self.scroll_view)
@@ -819,9 +822,6 @@ class ContractScreen(Screen):
         
     def update_contract_text(self, new_text):
         self.contract_text = new_text
-
-    def on_contract_text(self, instance, value):
-        self.contract_label.text = value
 
     def go_to_new_contract_screen(self, instance):
         self.manager.current = 'new_contract'
