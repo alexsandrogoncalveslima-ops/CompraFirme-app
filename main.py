@@ -223,20 +223,6 @@ class MainScreen(Screen):
     def go_to_payments_screen(self, instance):
         self.manager.current = 'payments'
 
-class PaymentCard(FloatLayout):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        
-        with self.canvas.before:
-            Color(CARD_BG_COLOR[0], CARD_BG_COLOR[1], CARD_BG_COLOR[2], CARD_BG_COLOR[3])
-            self.bg_rect = RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(15)])
-        
-        self.bind(pos=self.update_bg_rect, size=self.update_bg_rect)
-    
-    def update_bg_rect(self, *args):
-        self.bg_rect.pos = self.pos
-        self.bg_rect.size = self.size
-
 class PaymentsScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -255,7 +241,7 @@ class PaymentsScreen(Screen):
             spacing=dp(10),
             padding=(dp(10), 0)
         )
-        self.back_button = Button(
+        self.back_button = RoundedButton(
             text='Voltar',
             size_hint_x=0.2,
             background_color=SECONDARY_COLOR,
@@ -341,16 +327,23 @@ class PaymentsScreen(Screen):
                 valor_formatado = f"R$ {p['valor']:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
                 
                 # Container para o item da lista com fundo de card
-                list_item_container = PaymentCard(size_hint_y=None, height=dp(80))
-                
-                # Layout interno para os detalhes do pagamento e botões
-                content_layout = BoxLayout(
+                list_item_container = BoxLayout(
                     orientation='horizontal',
-                    padding=dp(15),
+                    size_hint_y=None,
+                    height=dp(60),
+                    padding=(dp(15), dp(10)),
                     spacing=dp(10)
                 )
 
-                # Labels de Nome, Valor e Data
+                # Cria um retângulo arredondado para o fundo
+                with list_item_container.canvas.before:
+                    Color(CARD_BG_COLOR[0], CARD_BG_COLOR[1], CARD_BG_COLOR[2], CARD_BG_COLOR[3])
+                    self.rect = RoundedRectangle(size=list_item_container.size, pos=list_item_container.pos, radius=[dp(15)])
+                
+                list_item_container.bind(pos=self.update_rect, size=self.update_rect)
+
+                # Layout interno para os detalhes do pagamento e botões
+                
                 name_label = Label(
                     text=p['nome_pagador'],
                     font_size='16sp',
@@ -358,51 +351,52 @@ class PaymentsScreen(Screen):
                     color=TEXT_COLOR_DARK,
                     halign='left',
                     valign='middle',
-                    size_hint_x=0.4,
-                    text_size=(self.payments_list_container.width * 0.4 - dp(30), None)
+                    text_size=(self.scroll_view.width * 0.4, None),
+                    size_hint_x=0.4
                 )
                 value_label = Label(
                     text=valor_formatado,
                     font_size='14sp',
                     color=SUCCESS_COLOR,
                     bold=True,
-                    halign='right',
+                    halign='center',
                     valign='middle',
-                    size_hint_x=0.3
+                    size_hint_x=0.25
                 )
                 date_label = Label(
                     text=data_formatada,
                     font_size='14sp',
                     color=TEXT_COLOR_LIGHT,
-                    halign='right',
+                    halign='center',
                     valign='middle',
-                    size_hint_x=0.3
+                    size_hint_x=0.25
                 )
                 
-                content_layout.add_widget(name_label)
-                content_layout.add_widget(value_label)
-                content_layout.add_widget(date_label)
-
-                # Layout para os botões de ação
                 buttons_layout = BoxLayout(
                     orientation='horizontal',
-                    size_hint_x=0.2,
+                    size_hint_x=0.1,
                     spacing=dp(5)
                 )
                 
-                edit_btn = Button(text='E', background_color=PRIMARY_COLOR, color=(1,1,1,1))
+                edit_btn = RoundedButton(text='E', background_color=PRIMARY_COLOR, color=(1,1,1,1))
                 edit_btn.bind(on_press=lambda btn, p_id=p['id'], p_nome=p['nome_pagador'], p_valor=p['valor']: self.show_edit_popup(p_id, p_nome, p_valor))
                 
-                delete_btn = Button(text='X', background_color=ACCENT_COLOR, color=(1,1,1,1))
+                delete_btn = RoundedButton(text='X', background_color=ACCENT_COLOR, color=(1,1,1,1))
                 delete_btn.bind(on_press=lambda btn, id=p['id']: self.show_admin_password_popup(id))
                 
                 buttons_layout.add_widget(edit_btn)
                 buttons_layout.add_widget(delete_btn)
                 
-                content_layout.add_widget(buttons_layout)
+                list_item_container.add_widget(name_label)
+                list_item_container.add_widget(value_label)
+                list_item_container.add_widget(date_label)
+                list_item_container.add_widget(buttons_layout)
                 
-                list_item_container.add_widget(content_layout)
                 self.payments_list_container.add_widget(list_item_container)
+    
+    def update_rect(self, instance, value):
+        instance.canvas.before.children[-1].pos = instance.pos
+        instance.canvas.before.children[-1].size = instance.size
 
     def show_edit_popup(self, payment_id, nome, valor):
         popup = EditPaymentPopup(payment_id, nome, valor, self.edit_payment_thread)
@@ -437,8 +431,8 @@ class PaymentsScreen(Screen):
         popup_layout.add_widget(password_input)
         
         btn_layout = BoxLayout(size_hint_y=None, height=dp(40), spacing=dp(10))
-        cancel_btn = Button(text='Cancelar')
-        confirm_btn = Button(text='Confirmar')
+        cancel_btn = RoundedButton(text='Cancelar')
+        confirm_btn = RoundedButton(text='Confirmar')
         
         btn_layout.add_widget(cancel_btn)
         btn_layout.add_widget(confirm_btn)
@@ -502,8 +496,8 @@ class EditPaymentPopup(Popup):
         layout.add_widget(self.password_input)
         
         btn_layout = BoxLayout(size_hint_y=None, height=dp(40), spacing=dp(10))
-        cancel_btn = Button(text='Cancelar')
-        confirm_btn = Button(text='Confirmar Edição')
+        cancel_btn = RoundedButton(text='Cancelar')
+        confirm_btn = RoundedButton(text='Confirmar Edição')
         
         btn_layout.add_widget(cancel_btn)
         btn_layout.add_widget(confirm_btn)
