@@ -48,7 +48,6 @@ def get_total_paid():
     total = cursor.fetchone()[0]
     return jsonify({"total": total if total is not None else 0}), 200
 
-# NOVO ENDPOINT: Rota para obter todos os pagamentos
 @app.route('/payments', methods=['GET'])
 def get_payments():
     conn = get_db()
@@ -66,7 +65,26 @@ def get_payments():
         })
     return jsonify(pagamentos_list), 200
 
+# NOVO ENDPOINT: Rota para excluir um pagamento
+@app.route('/delete_payment/<int:payment_id>', methods=['DELETE'])
+def delete_payment(payment_id):
+    # Verificação de senha de administrador (simples e temporária)
+    admin_password = request.headers.get('Admin-Password')
+    if admin_password != "admin123":
+        return jsonify({"error": "Acesso negado. Senha de administrador incorreta."}), 401
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT COUNT(*) FROM pagamentos WHERE id = ?", (payment_id,))
+    if cursor.fetchone()[0] == 0:
+        return jsonify({"error": "Pagamento não encontrado."}), 404
+        
+    cursor.execute("DELETE FROM pagamentos WHERE id = ?", (payment_id,))
+    conn.commit()
+    return jsonify({"message": "Pagamento excluído com sucesso!"}), 200
 
+# Endpoint de login mantido para referência futura, mas não usado pelo app
 @app.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
