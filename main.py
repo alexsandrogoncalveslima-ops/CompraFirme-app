@@ -16,6 +16,7 @@ from kivy.clock import mainthread, Clock
 from kivy.uix.popup import Popup
 from kivy.uix.floatlayout import FloatLayout
 from kivy.graphics import Color, RoundedRectangle
+from kivy.uix.image import Image
 import requests
 import json
 from threading import Thread
@@ -69,71 +70,76 @@ class RoundedButton(Button):
     def on_release(self):
         self.rect_color.a = 1.0
 
-
 class MainScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         
-        main_container = BoxLayout(
+        root_layout = BoxLayout(
             orientation='vertical',
             padding=dp(25), 
-            spacing=dp(20),
-            size_hint_y=None,
-            pos_hint={'center_y': 0.5}
+            spacing=dp(20)
         )
-        main_container.bind(minimum_height=main_container.setter('height'))
         
-        # Seção de valores
-        values_section = BoxLayout(
+        # Adiciona o logo
+        logo = Image(source='assets/logo.png', size_hint_y=None, height=dp(80))
+        root_layout.add_widget(logo)
+        
+        # Seção de valores dentro de um card
+        values_card = BoxLayout(
             orientation='vertical',
             padding=dp(20),
             spacing=dp(10),
             size_hint_y=None,
-            height=dp(180)
+            height=dp(200)
         )
-        values_section.add_widget(Label(text='VALOR TOTAL DO IMÓVEL', font_size='16sp', bold=True, color=TEXT_COLOR_DARK))
-        values_section.add_widget(Label(text='R$ 280.000,00', font_size='24sp', bold=True, color=PRIMARY_COLOR))
-        self.total_paid_label = Label(text='Total Pago: R$ 0,00', font_size='16sp', color=TEXT_COLOR_LIGHT)
-        values_section.add_widget(self.total_paid_label)
-        self.remaining_amount_label = Label(text='Valor Restante: R$ 0,00', font_size='22sp', bold=True, color=ACCENT_COLOR)
-        values_section.add_widget(self.remaining_amount_label)
-
-        # Card de valores
-        values_card = FloatLayout(size_hint_y=None, height=dp(200))
         with values_card.canvas.before:
             Color(CARD_BG_COLOR[0], CARD_BG_COLOR[1], CARD_BG_COLOR[2], CARD_BG_COLOR[3])
             self.values_card_rect = RoundedRectangle(size=values_card.size, pos=values_card.pos, radius=[dp(15)])
             values_card.bind(pos=self.update_card_rect, size=self.update_card_rect)
-        values_card.add_widget(values_section)
         
-        main_container.add_widget(values_card)
+        values_card.add_widget(Label(text='VALOR TOTAL DO IMÓVEL', font_size='16sp', bold=True, color=TEXT_COLOR_DARK))
+        values_card.add_widget(Label(text='R$ 280.000,00', font_size='24sp', bold=True, color=PRIMARY_COLOR))
+        self.total_paid_label = Label(text='Total Pago: R$ 0,00', font_size='16sp', color=TEXT_COLOR_LIGHT)
+        values_card.add_widget(self.total_paid_label)
+        self.remaining_amount_label = Label(text='Valor Restante: R$ 0,00', font_size='22sp', bold=True, color=ACCENT_COLOR)
+        values_card.add_widget(self.remaining_amount_label)
+        
+        root_layout.add_widget(values_card)
 
         # Seção para adicionar pagamento
-        main_container.add_widget(Label(text='ADICIONAR NOVO PAGAMENTO', font_size='16sp', bold=True, color=TEXT_COLOR_DARK))
-        
-        input_box = BoxLayout(orientation='vertical', spacing=dp(15), size_hint_y=None, height=dp(100))
+        input_card = BoxLayout(orientation='vertical', padding=dp(20), spacing=dp(15), size_hint_y=None, height=dp(200))
+        with input_card.canvas.before:
+            Color(CARD_BG_COLOR[0], CARD_BG_COLOR[1], CARD_BG_COLOR[2], CARD_BG_COLOR[3])
+            RoundedRectangle(size=input_card.size, pos=input_card.pos, radius=[dp(15)])
+            input_card.bind(pos=lambda *a: self.update_input_card_rect(input_card, *a), size=lambda *a: self.update_input_card_rect(input_card, *a))
+
+        input_card.add_widget(Label(text='ADICIONAR NOVO PAGAMENTO', font_size='16sp', bold=True, color=TEXT_COLOR_DARK))
         
         self.name_input = TextInput(hint_text='Nome do Pagador', multiline=False, size_hint_y=None, height=dp(45), font_size='16sp', padding=dp(10), background_color=(1, 1, 1, 1), foreground_color=TEXT_COLOR_DARK, cursor_color=PRIMARY_COLOR, hint_text_color=TEXT_COLOR_LIGHT)
-        input_box.add_widget(self.name_input)
+        input_card.add_widget(self.name_input)
 
         self.value_input = TextInput(hint_text='Valor (ex: 10000.00)', multiline=False, input_type='number', size_hint_y=None, height=dp(45), font_size='16sp', padding=dp(10), background_color=(1, 1, 1, 1), foreground_color=TEXT_COLOR_DARK, cursor_color=PRIMARY_COLOR, hint_text_color=TEXT_COLOR_LIGHT)
-        input_box.add_widget(self.value_input)
+        input_card.add_widget(self.value_input)
         
-        main_container.add_widget(input_box)
+        root_layout.add_widget(input_card)
         
         self.add_button = RoundedButton(text='Registrar Pagamento', size_hint_y=None, height=dp(50), font_size='18sp', background_color=SUCCESS_COLOR, color=(1, 1, 1, 1))
         self.add_button.bind(on_press=self.register_payment_thread)
-        main_container.add_widget(self.add_button)
+        root_layout.add_widget(self.add_button)
 
         payments_button = RoundedButton(text='Ver Pagamentos', size_hint_y=None, height=dp(50), font_size='18sp', background_color=PRIMARY_COLOR, color=(1, 1, 1, 1))
         payments_button.bind(on_press=self.go_to_payments_screen)
-        main_container.add_widget(payments_button)
+        root_layout.add_widget(payments_button)
 
-        self.add_widget(main_container)
+        self.add_widget(root_layout)
 
     def update_card_rect(self, instance, value):
         self.values_card_rect.pos = instance.pos
         self.values_card_rect.size = instance.size
+        
+    def update_input_card_rect(self, instance, *args):
+        instance.canvas.before.children[0].pos = instance.pos
+        instance.canvas.before.children[0].size = instance.size
 
     def on_enter(self, *args):
         self.update_values_thread()
@@ -281,7 +287,7 @@ class PaymentsScreen(Screen):
                     RoundedRectangle(size=payment_card.size, pos=payment_card.pos, radius=[dp(15)])
                 
                 # Layout interno do card
-                content_layout = BoxLayout(orientation='vertical', padding=(dp(15), dp(10)), spacing=dp(5))
+                content_layout = BoxLayout(orientation='vertical', padding=(dp(10), dp(8)), spacing=dp(3))
                 
                 # Layout superior do card (Nome e Valor)
                 top_row = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(30))
