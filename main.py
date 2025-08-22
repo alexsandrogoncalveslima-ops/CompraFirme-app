@@ -227,21 +227,60 @@ class PaymentsScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         
-        self.layout = BoxLayout(orientation='vertical', padding=dp(10), spacing=dp(10))
+        root_layout = BoxLayout(
+            orientation='vertical',
+            padding=dp(10),
+            spacing=dp(10)
+        )
         
-        top_layout = BoxLayout(size_hint_y=None, height=dp(60), spacing=dp(10), padding=(dp(10), dp(5)))
-        back_btn = Button(text='Voltar', size_hint_x=0.2, on_press=self.go_back, background_color=SECONDARY_COLOR, color=TEXT_COLOR_DARK)
+        top_layout = BoxLayout(
+            size_hint_y=None,
+            height=dp(60),
+            spacing=dp(10),
+            padding=(dp(10), dp(5))
+        )
+        back_btn = Button(
+            text='Voltar',
+            size_hint_x=0.2,
+            on_press=self.go_back,
+            background_color=SECONDARY_COLOR,
+            color=TEXT_COLOR_DARK
+        )
         top_layout.add_widget(back_btn)
-        top_layout.add_widget(Label(text='Histórico de Pagamentos', font_size='22sp', bold=True, size_hint_x=0.8, color=TEXT_COLOR_DARK))
-        self.layout.add_widget(top_layout)
+        top_layout.add_widget(Label(
+            text='Histórico de Pagamentos',
+            font_size='22sp',
+            bold=True,
+            size_hint_x=0.8,
+            color=TEXT_COLOR_DARK
+        ))
+        root_layout.add_widget(top_layout)
+
+        # Adicionando um cabeçalho para a lista de pagamentos
+        header_layout = BoxLayout(
+            size_hint_y=None,
+            height=dp(40),
+            padding=(dp(15), 0),
+            spacing=dp(10)
+        )
+        header_layout.add_widget(Label(text='Nome', font_size='16sp', bold=True, color=TEXT_COLOR_DARK, size_hint_x=0.4))
+        header_layout.add_widget(Label(text='Valor', font_size='16sp', bold=True, color=TEXT_COLOR_DARK, size_hint_x=0.3, halign='right'))
+        header_layout.add_widget(Label(text='Data', font_size='16sp', bold=True, color=TEXT_COLOR_DARK, size_hint_x=0.3, halign='right'))
+        header_layout.add_widget(Widget(size_hint_x=0.2)) # Espaço para os botões E e X
+        root_layout.add_widget(header_layout)
 
         self.scroll_view = ScrollView()
-        self.payments_list_container = GridLayout(cols=1, spacing=dp(10), size_hint_y=None)
+        self.payments_list_container = BoxLayout(
+            orientation='vertical',
+            spacing=dp(10),
+            size_hint_y=None,
+            padding=dp(10)
+        )
         self.payments_list_container.bind(minimum_height=self.payments_list_container.setter('height'))
         self.scroll_view.add_widget(self.payments_list_container)
         
-        self.layout.add_widget(self.scroll_view)
-        self.add_widget(self.layout)
+        root_layout.add_widget(self.scroll_view)
+        self.add_widget(root_layout)
 
     def on_enter(self, *args):
         self.load_payments()
