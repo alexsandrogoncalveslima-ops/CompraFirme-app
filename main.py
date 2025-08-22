@@ -14,6 +14,8 @@ from kivy.uix.widget import Widget
 from kivy.uix.progressbar import ProgressBar
 from kivy.clock import mainthread, Clock
 from kivy.uix.popup import Popup
+from kivy.uix.floatlayout import FloatLayout
+from kivy.graphics import Color, RoundedRectangle
 import requests
 import json
 from threading import Thread
@@ -25,14 +27,48 @@ from app_logic import SERVER_URL
 # Torna a janela menor para um visual mais compacto
 Window.size = (400, 600)
 
+# Define as cores
+BG_COLOR = (0.95, 0.96, 0.97, 1)  # Cinza muito claro
+CARD_BG_COLOR = (1, 1, 1, 1)  # Branco
+PRIMARY_COLOR = (0.2, 0.5, 0.8, 1)  # Azul
+SECONDARY_COLOR = (0.8, 0.8, 0.8, 1) # Cinza para botões
+SUCCESS_COLOR = (0.16, 0.65, 0.32, 1) # Verde para sucesso
+ACCENT_COLOR = (0.9, 0.3, 0.3, 1) # Vermelho para destaque
+TEXT_COLOR_DARK = (0.2, 0.2, 0.2, 1) # Texto escuro
+TEXT_COLOR_LIGHT = (0.5, 0.5, 0.5, 1) # Texto claro
+
+# Configura a cor de fundo da janela
+Window.clearcolor = BG_COLOR
+
 # Função auxiliar para exibir balão de alerta
-def show_popup(title, message):
+def show_popup(title, message, is_success=True):
     popup = Popup(
         title=title,
-        content=Label(text=message, halign='center', valign='middle'),
+        content=Label(text=message, halign='center', valign='middle', color=TEXT_COLOR_DARK),
         size_hint=(0.8, 0.2)
     )
     popup.open()
+
+class RoundedButton(Button):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.background_normal = ''
+        self.background_down = ''
+        with self.canvas.before:
+            self.rect_color = Color(self.background_color[0], self.background_color[1], self.background_color[2], self.background_color[3])
+            self.rect = RoundedRectangle(size=self.size, pos=self.pos, radius=[dp(10)])
+            self.bind(pos=self.update_rect, size=self.update_rect)
+            
+    def update_rect(self, *args):
+        self.rect.pos = self.pos
+        self.rect.size = self.size
+
+    def on_press(self):
+        self.rect_color.a = 0.7 
+    
+    def on_release(self):
+        self.rect_color.a = 1.0
+
 
 class MainScreen(Screen):
     def __init__(self, **kwargs):
@@ -50,39 +86,54 @@ class MainScreen(Screen):
         # Seção de valores
         values_section = BoxLayout(
             orientation='vertical',
-            padding=dp(10),
-            spacing=dp(5)
+            padding=dp(20),
+            spacing=dp(10),
+            size_hint_y=None,
+            height=dp(180)
         )
-        values_section.add_widget(Label(text='VALOR TOTAL DO IMÓVEL', font_size='16sp', bold=True, color=(0.2, 0.6, 0.8, 1)))
-        values_section.add_widget(Label(text='R$ 280.000,00', font_size='20sp', bold=True))
-        self.total_paid_label = Label(text='Total Pago: R$ 0,00', font_size='16sp')
+        values_section.add_widget(Label(text='VALOR TOTAL DO IMÓVEL', font_size='16sp', bold=True, color=TEXT_COLOR_DARK))
+        values_section.add_widget(Label(text='R$ 280.000,00', font_size='24sp', bold=True, color=PRIMARY_COLOR))
+        self.total_paid_label = Label(text='Total Pago: R$ 0,00', font_size='16sp', color=TEXT_COLOR_LIGHT)
         values_section.add_widget(self.total_paid_label)
-        self.remaining_amount_label = Label(text='Valor Restante: R$ 0,00', font_size='22sp', bold=True, color=(1, 0.4, 0.4, 1))
+        self.remaining_amount_label = Label(text='Valor Restante: R$ 0,00', font_size='22sp', bold=True, color=ACCENT_COLOR)
         values_section.add_widget(self.remaining_amount_label)
-        main_container.add_widget(values_section)
+
+        # Card de valores
+        values_card = FloatLayout(size_hint_y=None, height=dp(200))
+        with values_card.canvas.before:
+            Color(CARD_BG_COLOR[0], CARD_BG_COLOR[1], CARD_BG_COLOR[2], CARD_BG_COLOR[3])
+            self.values_card_rect = RoundedRectangle(size=values_card.size, pos=values_card.pos, radius=[dp(15)])
+            values_card.bind(pos=self.update_card_rect, size=self.update_card_rect)
+        values_card.add_widget(values_section)
+        
+        main_container.add_widget(values_card)
 
         # Seção para adicionar pagamento
-        main_container.add_widget(Label(text='ADICIONAR NOVO PAGAMENTO', font_size='16sp', bold=True, color=(0.8, 0.8, 0.8, 1)))
+        main_container.add_widget(Label(text='ADICIONAR NOVO PAGAMENTO', font_size='16sp', bold=True, color=TEXT_COLOR_DARK))
         
         input_box = BoxLayout(orientation='vertical', spacing=dp(15), size_hint_y=None, height=dp(100))
         
-        self.name_input = TextInput(hint_text='Nome do Pagador', multiline=False, size_hint_y=None, height=dp(45), font_size='16sp', padding=dp(10))
+        self.name_input = TextInput(hint_text='Nome do Pagador', multiline=False, size_hint_y=None, height=dp(45), font_size='16sp', padding=dp(10), background_color=(1, 1, 1, 1), foreground_color=TEXT_COLOR_DARK, cursor_color=PRIMARY_COLOR, hint_text_color=TEXT_COLOR_LIGHT)
         input_box.add_widget(self.name_input)
 
-        self.value_input = TextInput(hint_text='Valor (ex: 10000.00)', multiline=False, input_type='number', size_hint_y=None, height=dp(45), font_size='16sp', padding=dp(10))
+        self.value_input = TextInput(hint_text='Valor (ex: 10000.00)', multiline=False, input_type='number', size_hint_y=None, height=dp(45), font_size='16sp', padding=dp(10), background_color=(1, 1, 1, 1), foreground_color=TEXT_COLOR_DARK, cursor_color=PRIMARY_COLOR, hint_text_color=TEXT_COLOR_LIGHT)
         input_box.add_widget(self.value_input)
         
         main_container.add_widget(input_box)
         
-        self.add_button = Button(text='Registrar Pagamento', size_hint_y=None, height=dp(50), font_size='18sp', background_color=(0.3, 0.7, 0.3, 1))
+        self.add_button = RoundedButton(text='Registrar Pagamento', size_hint_y=None, height=dp(50), font_size='18sp', background_color=SUCCESS_COLOR, color=(1, 1, 1, 1))
         self.add_button.bind(on_press=self.register_payment_thread)
         main_container.add_widget(self.add_button)
 
-        payments_button = Button(text='Ver Pagamentos', size_hint_y=None, height=dp(50), font_size='18sp', background_color=(0.2, 0.6, 0.8, 1))
+        payments_button = RoundedButton(text='Ver Pagamentos', size_hint_y=None, height=dp(50), font_size='18sp', background_color=PRIMARY_COLOR, color=(1, 1, 1, 1))
         payments_button.bind(on_press=self.go_to_payments_screen)
         main_container.add_widget(payments_button)
 
         self.add_widget(main_container)
+
+    def update_card_rect(self, instance, value):
+        self.values_card_rect.pos = instance.pos
+        self.values_card_rect.size = instance.size
 
     def on_enter(self, *args):
         self.update_values_thread()
@@ -161,77 +212,25 @@ class MainScreen(Screen):
     def clear_inputs_and_show_message_on_main_thread(self, message):
         self.name_input.text = ''
         self.value_input.text = ''
-        show_popup("Sucesso", message)
+        show_popup("Sucesso", message, is_success=True)
 
     def go_to_payments_screen(self, instance):
         self.manager.current = 'payments'
-
-class EditPaymentPopup(Popup):
-    def __init__(self, payment_id, current_nome, current_valor, on_edit_callback, **kwargs):
-        super().__init__(**kwargs)
-        self.payment_id = payment_id
-        self.on_edit_callback = on_edit_callback
-        
-        layout = BoxLayout(orientation='vertical', padding=dp(10), spacing=dp(10))
-        layout.add_widget(Label(text='Editar Pagamento', font_size='20sp'))
-        
-        self.name_input = TextInput(text=current_nome, multiline=False, hint_text='Nome do Pagador', size_hint_y=None, height=dp(35))
-        layout.add_widget(self.name_input)
-        
-        self.value_input = TextInput(text=str(current_valor), multiline=False, hint_text='Valor', input_type='number', size_hint_y=None, height=dp(35))
-        layout.add_widget(self.value_input)
-        
-        self.password_input = TextInput(password=True, multiline=False, hint_text='Senha de Administrador', size_hint_y=None, height=dp(35))
-        layout.add_widget(self.password_input)
-        
-        btn_layout = BoxLayout(size_hint_y=None, height=dp(40), spacing=dp(10))
-        cancel_btn = Button(text='Cancelar')
-        confirm_btn = Button(text='Confirmar Edição')
-        
-        btn_layout.add_widget(cancel_btn)
-        btn_layout.add_widget(confirm_btn)
-        layout.add_widget(btn_layout)
-        
-        self.content = layout
-        self.title = 'Editar Pagamento'
-        self.size_hint = (0.9, 0.6)
-        self.auto_dismiss = False
-        
-        def dismiss_popup(instance):
-            self.dismiss()
-        
-        def confirm_edit(instance):
-            new_nome = self.name_input.text
-            new_valor = self.value_input.text
-            password = self.password_input.text
-            self.on_edit_callback(self.payment_id, new_nome, new_valor, password)
-            self.dismiss()
-
-        cancel_btn.bind(on_press=dismiss_popup)
-        confirm_btn.bind(on_press=confirm_edit)
 
 class PaymentsScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         
-        self.layout = BoxLayout(orientation='vertical', padding=dp(10), spacing=dp(5))
+        self.layout = BoxLayout(orientation='vertical', padding=dp(10), spacing=dp(10))
         
-        top_layout = BoxLayout(size_hint_y=None, height=dp(40), spacing=dp(10))
-        top_layout.add_widget(Button(text='Voltar', size_hint_x=0.2, on_press=self.go_back))
-        top_layout.add_widget(Label(text='Histórico de Pagamentos', font_size='20sp', size_hint_x=0.8))
+        top_layout = BoxLayout(size_hint_y=None, height=dp(60), spacing=dp(10), padding=(dp(10), dp(5)))
+        back_btn = Button(text='Voltar', size_hint_x=0.2, on_press=self.go_back, background_color=SECONDARY_COLOR, color=TEXT_COLOR_DARK)
+        top_layout.add_widget(back_btn)
+        top_layout.add_widget(Label(text='Histórico de Pagamentos', font_size='22sp', bold=True, size_hint_x=0.8, color=TEXT_COLOR_DARK))
         self.layout.add_widget(top_layout)
 
-        # Cabeçalho da Tabela
-        header_row = GridLayout(cols=5, size_hint_y=None, height=dp(30), padding=dp(5), spacing=dp(5))
-        header_row.add_widget(Label(text='Nome', font_size='14sp', bold=True, size_hint_x=0.4))
-        header_row.add_widget(Label(text='Valor', font_size='14sp', bold=True, size_hint_x=0.25))
-        header_row.add_widget(Label(text='Data', font_size='14sp', bold=True, size_hint_x=0.2))
-        header_row.add_widget(Label(text='E', font_size='14sp', bold=True, size_hint_x=0.075))
-        header_row.add_widget(Label(text='X', font_size='14sp', bold=True, size_hint_x=0.075))
-        self.layout.add_widget(header_row)
-
         self.scroll_view = ScrollView()
-        self.payments_list_container = GridLayout(cols=1, spacing=dp(5), size_hint_y=None, row_default_height=dp(50))
+        self.payments_list_container = GridLayout(cols=1, spacing=dp(10), size_hint_y=None)
         self.payments_list_container.bind(minimum_height=self.payments_list_container.setter('height'))
         self.scroll_view.add_widget(self.payments_list_container)
         
@@ -251,7 +250,7 @@ class PaymentsScreen(Screen):
 
     def load_payments(self, dt=None):
         self.payments_list_container.clear_widgets()
-        self.payments_list_container.add_widget(Label(text="Carregando...", size_hint_y=None, height=dp(40)))
+        self.payments_list_container.add_widget(Label(text="Carregando...", size_hint_y=None, height=dp(40), color=TEXT_COLOR_LIGHT))
         Thread(target=self.fetch_payments_data).start()
 
     def fetch_payments_data(self):
@@ -269,26 +268,44 @@ class PaymentsScreen(Screen):
     def populate_list_on_main_thread(self, pagamentos):
         self.payments_list_container.clear_widgets()
         if not pagamentos:
-            self.payments_list_container.add_widget(Label(text="Nenhum pagamento registrado."))
+            self.payments_list_container.add_widget(Label(text="Nenhum pagamento registrado.", color=TEXT_COLOR_LIGHT))
         else:
             for p in pagamentos:
                 data_formatada = p['data'].split('T')[0]
                 valor_formatado = f"R$ {p['valor']:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
                 
-                payment_item = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(40), padding=dp(5), spacing=dp(5))
-                payment_item.add_widget(Label(text=p['nome_pagador'], size_hint_x=0.4))
-                payment_item.add_widget(Label(text=valor_formatado, size_hint_x=0.25))
-                payment_item.add_widget(Label(text=data_formatada, size_hint_x=0.2))
-
-                edit_btn = Button(text='E', size_hint_x=0.075, background_color=(0, 0.5, 1, 1))
+                # Card para cada pagamento
+                payment_card = FloatLayout(size_hint_y=None, height=dp(90))
+                with payment_card.canvas.before:
+                    Color(CARD_BG_COLOR[0], CARD_BG_COLOR[1], CARD_BG_COLOR[2], CARD_BG_COLOR[3])
+                    RoundedRectangle(size=payment_card.size, pos=payment_card.pos, radius=[dp(15)])
+                
+                # Layout interno do card
+                content_layout = BoxLayout(orientation='vertical', padding=(dp(15), dp(10)), spacing=dp(5))
+                
+                # Layout superior do card (Nome e Valor)
+                top_row = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(30))
+                top_row.add_widget(Label(text=p['nome_pagador'], font_size='18sp', bold=True, color=TEXT_COLOR_DARK, size_hint_x=0.6))
+                top_row.add_widget(Label(text=valor_formatado, font_size='16sp', bold=True, color=SUCCESS_COLOR, size_hint_x=0.4, halign='right'))
+                content_layout.add_widget(top_row)
+                
+                # Layout inferior do card (Data e Botões de Ação)
+                bottom_row = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(30), spacing=dp(10))
+                bottom_row.add_widget(Label(text=f"Data: {data_formatada}", font_size='14sp', color=TEXT_COLOR_LIGHT, size_hint_x=0.8, halign='left'))
+                
+                edit_btn = Button(text='E', size_hint_x=0.1, background_color=PRIMARY_COLOR, color=(1,1,1,1))
                 edit_btn.bind(on_press=lambda btn, p_id=p['id'], p_nome=p['nome_pagador'], p_valor=p['valor']: self.show_edit_popup(p_id, p_nome, p_valor))
-                payment_item.add_widget(edit_btn)
                 
-                delete_btn = Button(text='X', size_hint_x=0.075, background_color=(1, 0, 0, 1))
+                delete_btn = Button(text='X', size_hint_x=0.1, background_color=ACCENT_COLOR, color=(1,1,1,1))
                 delete_btn.bind(on_press=lambda btn, id=p['id']: self.show_admin_password_popup(id))
-                payment_item.add_widget(delete_btn)
                 
-                self.payments_list_container.add_widget(payment_item)
+                bottom_row.add_widget(edit_btn)
+                bottom_row.add_widget(delete_btn)
+                
+                content_layout.add_widget(bottom_row)
+                
+                payment_card.add_widget(content_layout)
+                self.payments_list_container.add_widget(payment_card)
     
     def show_edit_popup(self, payment_id, nome, valor):
         popup = EditPaymentPopup(payment_id, nome, valor, self.edit_payment_thread)
@@ -368,6 +385,50 @@ class PaymentsScreen(Screen):
             
     def go_back(self, instance):
         self.manager.current = 'main'
+
+class EditPaymentPopup(Popup):
+    def __init__(self, payment_id, current_nome, current_valor, on_edit_callback, **kwargs):
+        super().__init__(**kwargs)
+        self.payment_id = payment_id
+        self.on_edit_callback = on_edit_callback
+        
+        layout = BoxLayout(orientation='vertical', padding=dp(10), spacing=dp(10))
+        layout.add_widget(Label(text='Editar Pagamento', font_size='20sp'))
+        
+        self.name_input = TextInput(text=current_nome, multiline=False, hint_text='Nome do Pagador', size_hint_y=None, height=dp(35))
+        layout.add_widget(self.name_input)
+        
+        self.value_input = TextInput(text=str(current_valor), multiline=False, hint_text='Valor', input_type='number', size_hint_y=None, height=dp(35))
+        layout.add_widget(self.value_input)
+        
+        self.password_input = TextInput(password=True, multiline=False, hint_text='Senha de Administrador', size_hint_y=None, height=dp(35))
+        layout.add_widget(self.password_input)
+        
+        btn_layout = BoxLayout(size_hint_y=None, height=dp(40), spacing=dp(10))
+        cancel_btn = Button(text='Cancelar')
+        confirm_btn = Button(text='Confirmar Edição')
+        
+        btn_layout.add_widget(cancel_btn)
+        btn_layout.add_widget(confirm_btn)
+        layout.add_widget(btn_layout)
+        
+        self.content = layout
+        self.title = 'Editar Pagamento'
+        self.size_hint = (0.9, 0.6)
+        self.auto_dismiss = False
+        
+        def dismiss_popup(instance):
+            self.dismiss()
+        
+        def confirm_edit(instance):
+            new_nome = self.name_input.text
+            new_valor = self.value_input.text
+            password = self.password_input.text
+            self.on_edit_callback(self.payment_id, new_nome, new_valor, password)
+            self.dismiss()
+
+        cancel_btn.bind(on_press=dismiss_popup)
+        confirm_btn.bind(on_press=confirm_edit)
 
 class CompraFirmeApp(App):
     def build(self):
