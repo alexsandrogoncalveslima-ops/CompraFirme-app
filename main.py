@@ -226,7 +226,12 @@ class WizardScreen(Screen):
         return True
 
     def go_back(self, instance):
-        self.manager.current = 'contrato_resumo' if self.name == 'new_contract' else self.manager.previous()
+        if self.name == 'comprador_form':
+            self.manager.current = 'imovel_form'
+        elif self.name == 'vendedor_form':
+            self.manager.current = 'comprador_form'
+        elif self.name == 'contrato_resumo':
+            self.manager.current = 'vendedor_form'
 
 class ImovelFormScreen(WizardScreen):
     def __init__(self, **kwargs):
@@ -441,7 +446,21 @@ class VendedorFormScreen(WizardScreen):
 class ContratoResumoScreen(WizardScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.build_header('Resumo do Contrato', '4/4')
+        
+        # O botão Voltar para esta tela é adicionado de forma diferente, pois ela tem um layout customizado.
+        header_layout = BoxLayout(
+            orientation='horizontal',
+            size_hint_y=None,
+            height=dp(50)
+        )
+        back_button = RoundedButton(text='Voltar', size_hint_x=0.2, background_color=SECONDARY_COLOR, color=TEXT_COLOR_DARK)
+        back_button.bind(on_press=self.go_back)
+        header_layout.add_widget(back_button)
+        
+        header_layout.add_widget(Label(text='Etapa 4/4', font_size='18sp', color=TEXT_COLOR_LIGHT, halign='right', valign='middle', size_hint_x=0.2))
+        
+        header_layout.add_widget(Label(text='Resumo do Contrato', font_size='22sp', bold=True, color=TEXT_COLOR_DARK, halign='left', valign='middle', size_hint_x=0.6))
+        self.layout.add_widget(header_layout, index=len(self.layout.children))
         
         self.scroll_view = ScrollView()
         self.resumo_container = BoxLayout(
@@ -453,16 +472,40 @@ class ContratoResumoScreen(WizardScreen):
         self.resumo_container.bind(minimum_height=self.resumo_container.setter('height'))
         self.scroll_view.add_widget(self.resumo_container)
         self.layout.add_widget(self.scroll_view)
-
-        generate_button = RoundedButton(
-            text='Gerar Contrato',
+        
+        button_layout = BoxLayout(
+            orientation='horizontal',
             size_hint_y=None,
             height=dp(50),
+            spacing=dp(10)
+        )
+        
+        generate_button = RoundedButton(
+            text='Gerar Contrato',
             background_color=SUCCESS_COLOR,
             color=(1, 1, 1, 1)
         )
         generate_button.bind(on_press=self.generate_contract)
-        self.layout.add_widget(generate_button)
+        
+        clear_button = RoundedButton(
+            text='Limpar',
+            background_color=ACCENT_COLOR,
+            color=(1, 1, 1, 1)
+        )
+        clear_button.bind(on_press=self.clear_data)
+        
+        button_layout.add_widget(generate_button)
+        button_layout.add_widget(clear_button)
+        
+        self.layout.add_widget(button_layout)
+
+    def go_back(self, instance):
+        self.manager.current = 'vendedor_form'
+
+    def clear_data(self, instance):
+        self.manager.app.contract_data = {}
+        show_popup("Dados Limpos", "Os dados do contrato foram limpos. Você pode começar um novo contrato.")
+        self.manager.current = 'new_contract_start'
 
     def on_enter(self, *args):
         self.update_resumo()
@@ -522,21 +565,38 @@ class ContratoResumoScreen(WizardScreen):
         instance.canvas.before.children[-1].size = instance.size
 
     def generate_contract(self, instance):
-        # A lógica de geração do contrato com o template vai aqui
-        # As informações estão em self.manager.app.contract_data
-        
-        # Exemplo de como usar os dados
         dados = self.manager.app.contract_data
         
-        # A lógica para preencher o CONTRATO_TEMPLATE com os dados preenchidos
-        # e gerar o contrato final está faltando, mas os dados necessários estão aqui.
-        # Exemplo: contrato_final = CONTRATO_TEMPLATE.format(**dados['imovel'], **dados['comprador'], etc.)
-        
-        show_popup("Contrato Gerado", "O contrato foi gerado com sucesso!")
-        self.manager.current = 'contract'
+        try:
+            contrato_final = CONTRATO_TEMPLATE.format(
+                comprador_nome=dados['comprador']['comprador_nome'],
+                comprador_nacionalidade=dados['comprador']['comprador_nacionalidade'],
+                comprador_estado_civil=dados['comprador']['comprador_estado_civil'],
+                comprador_cpf=dados['comprador']['comprador_cpf'],
+                comprador_telefone=dados['comprador']['comprador_telefone'],
+                comprador_email=dados['comprador']['comprador_email'],
+                vendedor_nome=dados['vendedor']['vendedor_nome'],
+                vendedor_nacionalidade=dados['vendedor']['vendedor_nacionalidade'],
+                vendedor_estado_civil=dados['vendedor']['vendedor_estado_civil'],
+                vendedor_cpf=dados['vendedor']['vendedor_cpf'],
+                vendedor_telefone=dados['vendedor']['vendedor_telefone'],
+                vendedor_email=dados['vendedor']['vendedor_email'],
+                imovel_rua=dados['imovel']['imovel_rua'],
+                imovel_numero=dados['imovel']['imovel_numero'],
+                imovel_bairro=dados['imovel']['imovel_bairro'],
+                imovel_cidade=dados['imovel']['imovel_cidade'],
+                imovel_estado=dados['imovel']['imovel_estado'],
+                imovel_cep=dados['imovel']['imovel_cep'],
+                data_atual=datetime.now().strftime('%d/%m/%Y'),
+            )
+            
+            self.manager.get_screen('contract').update_contract_text(contrato_final)
+            self.manager.current = 'contract'
+        except KeyError as e:
+            show_popup("Erro ao Gerar Contrato", f"Dados incompletos. Por favor, volte e preencha todos os campos. Campo faltando: {e}")
 
 class MainScreen(Screen):
-    # (Código da MainScreen, PaymentsScreen, etc. não foi alterado para manter o foco)
+    # (Código da MainScreen não foi alterado)
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         
@@ -704,6 +764,7 @@ class MainScreen(Screen):
         self.manager.current = 'new_contract_start'
 
 class PaymentsScreen(Screen):
+    # (Código da PaymentsScreen não foi alterado)
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         
@@ -951,6 +1012,7 @@ class PaymentsScreen(Screen):
         self.manager.current = 'main'
 
 class ContractScreen(Screen):
+    # (Código da ContractScreen não foi alterado)
     contract_text = StringProperty(CONTRATO_TEMPLATE)
 
     def __init__(self, **kwargs):
@@ -1036,7 +1098,7 @@ class CompraFirmeApp(App):
     def build(self):
         self.contract_data = {}
         sm = ScreenManager()
-        sm.app = self  # Linha adicionada para corrigir o erro
+        sm.app = self
         sm.add_widget(MainScreen(name='main'))
         sm.add_widget(PaymentsScreen(name='payments'))
         sm.add_widget(ContractScreen(name='contract'))
