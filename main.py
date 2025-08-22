@@ -333,10 +333,9 @@ class PaymentsScreen(Screen):
             spacing=dp(10)
         )
         table_header.add_widget(Label(text='Nome', font_size='16sp', bold=True, color=TEXT_COLOR_DARK, halign='left', valign='middle', size_hint_x=0.4))
-        table_header.add_widget(Label(text='Valor', font_size='16sp', bold=True, color=TEXT_COLOR_DARK, halign='right', valign='middle', size_hint_x=0.3))
-        table_header.add_widget(Label(text='Data', font_size='16sp', bold=True, color=TEXT_COLOR_DARK, halign='right', valign='middle', size_hint_x=0.3))
-        # Widget para alinhar com os botões de ação
-        table_header.add_widget(Widget(size_hint_x=0.2, width=dp(50))) 
+        table_header.add_widget(Label(text='Valor', font_size='16sp', bold=True, color=TEXT_COLOR_DARK, halign='center', valign='middle', size_hint_x=0.25))
+        table_header.add_widget(Label(text='Data', font_size='16sp', bold=True, color=TEXT_COLOR_DARK, halign='center', valign='middle', size_hint_x=0.25))
+        table_header.add_widget(Widget(size_hint_x=0.2)) # Espaço para os botões de ação
         root_layout.add_widget(table_header)
         
         # ScrollView para a lista de pagamentos
@@ -663,7 +662,7 @@ class NewContractScreen(Screen):
         self.data_parcela_1 = self.add_input('Data 1ª Parcela (DD/MM/AAAA):', hint_text='DD/MM/AAAA')
         self.saldo_restante = self.add_input('Saldo Restante (R$):', input_type='number', hint_text='20000.00')
         self.data_lavratura_escritura = self.add_input('Data Lavratura Escritura (DD/MM/AAAA):', hint_text='DD/MM/AAAA')
-        self.porcentagem_multa = self.add_input('Multa (%):', input_type='number', hint_text='Ex: 10%')
+        self.porcentagem_multa = self.add_input('Multa (%):', input_type='number', hint_text='Ex: 10')
         self.indice_reajuste = self.add_input('Índice de Reajuste:', hint_text='Ex: IGP-M ou IPCA')
         self.data_transferencia_posse = self.add_input('Data Transferência Posse (DD/MM/AAAA):', hint_text='DD/MM/AAAA')
         self.aluguel_diario = self.add_input('Aluguel Diário (R$):', input_type='number', hint_text='100.00')
