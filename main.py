@@ -567,6 +567,25 @@ class ContratoResumoScreen(WizardScreen):
     def generate_contract(self, instance):
         dados = self.manager.app.contract_data
         
+        required_fields = {
+            'imovel': ['imovel_rua', 'imovel_numero', 'imovel_bairro', 'imovel_cidade', 'imovel_estado', 'imovel_cep'],
+            'comprador': ['comprador_nome', 'comprador_nacionalidade', 'comprador_estado_civil', 'comprador_cpf', 'comprador_telefone', 'comprador_email'],
+            'vendedor': ['vendedor_nome', 'vendedor_nacionalidade', 'vendedor_estado_civil', 'vendedor_cpf', 'vendedor_telefone', 'vendedor_email']
+        }
+        
+        missing_fields = []
+        for section, fields in required_fields.items():
+            if section not in dados:
+                missing_fields.extend(fields)
+                continue
+            for field in fields:
+                if not dados[section].get(field):
+                    missing_fields.append(field)
+        
+        if missing_fields:
+            show_popup("Erro ao Gerar Contrato", f"Dados incompletos. Por favor, volte e preencha todos os campos. Campos faltando: {', '.join(missing_fields)}")
+            return
+            
         try:
             contrato_final = CONTRATO_TEMPLATE.format(
                 comprador_nome=dados['comprador']['comprador_nome'],
