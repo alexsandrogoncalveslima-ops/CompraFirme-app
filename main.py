@@ -51,6 +51,80 @@ def show_popup(title, message, is_success=True):
     )
     popup.open()
 
+class EditPaymentPopup(Popup):
+    def __init__(self, payment_id, nome, valor, callback, **kwargs):
+        super().__init__(**kwargs)
+        self.payment_id = payment_id
+        self.callback = callback
+        self.title = 'Editar Pagamento'
+        self.size_hint = (0.8, 0.6)
+        
+        layout = BoxLayout(orientation='vertical', padding=dp(10), spacing=dp(10))
+        
+        # Campo para o nome
+        layout.add_widget(Label(text='Nome do Pagador', halign='left', text_size=(self.width, None), color=TEXT_COLOR_DARK))
+        self.name_input = TextInput(
+            text=nome,
+            multiline=False,
+            size_hint_y=None,
+            height=dp(40)
+        )
+        layout.add_widget(self.name_input)
+        
+        # Campo para o valor
+        layout.add_widget(Label(text='Valor', halign='left', text_size=(self.width, None), color=TEXT_COLOR_DARK))
+        self.value_input = TextInput(
+            text=str(valor),
+            multiline=False,
+            input_type='number',
+            size_hint_y=None,
+            height=dp(40)
+        )
+        layout.add_widget(self.value_input)
+        
+        # Campo para a senha do admin
+        layout.add_widget(Label(text='Senha de Administrador', halign='left', text_size=(self.width, None), color=TEXT_COLOR_DARK))
+        self.password_input = TextInput(
+            password=True,
+            multiline=False,
+            size_hint_y=None,
+            height=dp(40)
+        )
+        layout.add_widget(self.password_input)
+        
+        # Botões
+        buttons_layout = BoxLayout(spacing=dp(10), size_hint_y=None, height=dp(40))
+        cancel_button = RoundedButton(text='Cancelar', background_color=SECONDARY_COLOR, color=TEXT_COLOR_DARK)
+        save_button = RoundedButton(text='Salvar', background_color=SUCCESS_COLOR)
+        
+        buttons_layout.add_widget(cancel_button)
+        buttons_layout.add_widget(save_button)
+        
+        layout.add_widget(buttons_layout)
+        
+        cancel_button.bind(on_press=self.dismiss)
+        save_button.bind(on_press=self.save_and_dismiss)
+        
+        self.content = layout
+
+    def save_and_dismiss(self, instance):
+        new_nome = self.name_input.text.strip()
+        new_valor = self.value_input.text.strip()
+        password = self.password_input.text.strip()
+        
+        if not new_nome or not new_valor or not password:
+            show_popup("Erro", "Preencha todos os campos.")
+            return
+
+        try:
+            float(new_valor)
+        except ValueError:
+            show_popup("Erro", "Valor inválido.")
+            return
+
+        self.callback(self.payment_id, new_nome, new_valor, password)
+        self.dismiss()
+
 class RoundedButton(Button):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -962,6 +1036,7 @@ class CompraFirmeApp(App):
     def build(self):
         self.contract_data = {}
         sm = ScreenManager()
+        sm.app = self  # Linha adicionada para corrigir o erro
         sm.add_widget(MainScreen(name='main'))
         sm.add_widget(PaymentsScreen(name='payments'))
         sm.add_widget(ContractScreen(name='contract'))
