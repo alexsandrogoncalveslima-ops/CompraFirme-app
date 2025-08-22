@@ -70,6 +70,53 @@ class RoundedButton(Button):
     def on_release(self):
         self.rect_color.a = 1.0
 
+# Movemos a classe EditPaymentPopup para antes de MainScreen e PaymentsScreen
+# para evitar o erro de 'EditPaymentPopup' is not defined
+class EditPaymentPopup(Popup):
+    def __init__(self, payment_id, current_nome, current_valor, on_edit_callback, **kwargs):
+        super().__init__(**kwargs)
+        self.payment_id = payment_id
+        self.on_edit_callback = on_edit_callback
+        
+        layout = BoxLayout(orientation='vertical', padding=dp(10), spacing=dp(10))
+        layout.add_widget(Label(text='Editar Pagamento', font_size='20sp'))
+        
+        self.name_input = TextInput(text=current_nome, multiline=False, hint_text='Nome do Pagador', size_hint_y=None, height=dp(35))
+        layout.add_widget(self.name_input)
+        
+        self.value_input = TextInput(text=str(current_valor), multiline=False, hint_text='Valor', input_type='number', size_hint_y=None, height=dp(35))
+        layout.add_widget(self.value_input)
+        
+        self.password_input = TextInput(password=True, multiline=False, hint_text='Senha de Administrador', size_hint_y=None, height=dp(35))
+        layout.add_widget(self.password_input)
+        
+        btn_layout = BoxLayout(size_hint_y=None, height=dp(40), spacing=dp(10))
+        
+        cancel_btn = RoundedButton(text='Cancelar', background_color=SECONDARY_COLOR, color=TEXT_COLOR_DARK)
+        confirm_btn = RoundedButton(text='Confirmar Edição', background_color=PRIMARY_COLOR, color=(1, 1, 1, 1))
+        
+        btn_layout.add_widget(cancel_btn)
+        btn_layout.add_widget(confirm_btn)
+        layout.add_widget(btn_layout)
+        
+        self.content = layout
+        self.title = 'Editar Pagamento'
+        self.size_hint = (0.9, 0.6)
+        self.auto_dismiss = False
+        
+        def dismiss_popup(instance):
+            self.dismiss()
+        
+        def confirm_edit(instance):
+            new_nome = self.name_input.text
+            new_valor = self.value_input.text
+            password = self.password_input.text
+            self.on_edit_callback(self.payment_id, new_nome, new_valor, password)
+            self.dismiss()
+
+        cancel_btn.bind(on_press=dismiss_popup)
+        confirm_btn.bind(on_press=confirm_edit)
+
 class MainScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -553,7 +600,7 @@ class CompraFirmeApp(App):
         sm = ScreenManager()
         sm.add_widget(MainScreen(name='main'))
         sm.add_widget(PaymentsScreen(name='payments'))
-        sm.add_widget(ContractScreen(name='contract')) # Adiciona a nova tela ao ScreenManager
+        sm.add_widget(ContractScreen(name='contract'))
         return sm
 
 if __name__ == '__main__':
