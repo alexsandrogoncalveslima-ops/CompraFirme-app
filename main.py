@@ -127,9 +127,24 @@ class MainScreen(Screen):
         self.add_button.bind(on_press=self.register_payment_thread)
         root_layout.add_widget(self.add_button)
 
-        payments_button = RoundedButton(text='Ver Pagamentos', size_hint_y=None, height=dp(50), font_size='18sp', background_color=PRIMARY_COLOR, color=(1, 1, 1, 1))
+        # Layout para os dois botões na parte inferior
+        button_layout = BoxLayout(
+            orientation='horizontal',
+            size_hint_y=None,
+            height=dp(50),
+            spacing=dp(10)
+        )
+
+        payments_button = RoundedButton(text='Ver Pagamentos', size_hint_y=1, font_size='18sp', background_color=PRIMARY_COLOR, color=(1, 1, 1, 1))
         payments_button.bind(on_press=self.go_to_payments_screen)
-        root_layout.add_widget(payments_button)
+        
+        contract_button = RoundedButton(text='Contrato', size_hint_y=1, font_size='18sp', background_color=SECONDARY_COLOR, color=TEXT_COLOR_DARK)
+        contract_button.bind(on_press=self.go_to_contract_screen)
+
+        button_layout.add_widget(payments_button)
+        button_layout.add_widget(contract_button)
+        
+        root_layout.add_widget(button_layout)
 
         self.add_widget(root_layout)
 
@@ -222,6 +237,9 @@ class MainScreen(Screen):
 
     def go_to_payments_screen(self, instance):
         self.manager.current = 'payments'
+    
+    def go_to_contract_screen(self, instance):
+        self.manager.current = 'contract'
 
 class PaymentsScreen(Screen):
     def __init__(self, **kwargs):
@@ -432,7 +450,6 @@ class PaymentsScreen(Screen):
         
         btn_layout = BoxLayout(size_hint_y=None, height=dp(40), spacing=dp(10))
         
-        # Correção aqui: Adicionar o texto aos botões
         cancel_btn = RoundedButton(text='Cancelar', background_color=SECONDARY_COLOR, color=TEXT_COLOR_DARK)
         confirm_btn = RoundedButton(text='Confirmar', background_color=ACCENT_COLOR, color=(1, 1, 1, 1))
         
@@ -479,57 +496,64 @@ class PaymentsScreen(Screen):
     def go_back(self, instance):
         self.manager.current = 'main'
 
-class EditPaymentPopup(Popup):
-    def __init__(self, payment_id, current_nome, current_valor, on_edit_callback, **kwargs):
-        super().__init__(**kwargs)
-        self.payment_id = payment_id
-        self.on_edit_callback = on_edit_callback
-        
-        layout = BoxLayout(orientation='vertical', padding=dp(10), spacing=dp(10))
-        layout.add_widget(Label(text='Editar Pagamento', font_size='20sp'))
-        
-        self.name_input = TextInput(text=current_nome, multiline=False, hint_text='Nome do Pagador', size_hint_y=None, height=dp(35))
-        layout.add_widget(self.name_input)
-        
-        self.value_input = TextInput(text=str(current_valor), multiline=False, hint_text='Valor', input_type='number', size_hint_y=None, height=dp(35))
-        layout.add_widget(self.value_input)
-        
-        self.password_input = TextInput(password=True, multiline=False, hint_text='Senha de Administrador', size_hint_y=None, height=dp(35))
-        layout.add_widget(self.password_input)
-        
-        btn_layout = BoxLayout(size_hint_y=None, height=dp(40), spacing=dp(10))
-        
-        # Correção aqui: Adicionar o texto aos botões
-        cancel_btn = RoundedButton(text='Cancelar', background_color=SECONDARY_COLOR, color=TEXT_COLOR_DARK)
-        confirm_btn = RoundedButton(text='Confirmar Edição', background_color=PRIMARY_COLOR, color=(1, 1, 1, 1))
-        
-        btn_layout.add_widget(cancel_btn)
-        btn_layout.add_widget(confirm_btn)
-        layout.add_widget(btn_layout)
-        
-        self.content = layout
-        self.title = 'Editar Pagamento'
-        self.size_hint = (0.9, 0.6)
-        self.auto_dismiss = False
-        
-        def dismiss_popup(instance):
-            self.dismiss()
-        
-        def confirm_edit(instance):
-            new_nome = self.name_input.text
-            new_valor = self.value_input.text
-            password = self.password_input.text
-            self.on_edit_callback(self.payment_id, new_nome, new_valor, password)
-            self.dismiss()
 
-        cancel_btn.bind(on_press=dismiss_popup)
-        confirm_btn.bind(on_press=confirm_edit)
+# Nova classe para a tela de Contrato
+class ContractScreen(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        
+        root_layout = BoxLayout(
+            orientation='vertical',
+            padding=dp(20),
+            spacing=dp(20)
+        )
+
+        header = BoxLayout(
+            orientation='horizontal',
+            size_hint_y=None,
+            height=dp(50)
+        )
+
+        back_button = RoundedButton(
+            text='Voltar',
+            size_hint_x=0.2,
+            background_color=SECONDARY_COLOR,
+            color=TEXT_COLOR_DARK
+        )
+        back_button.bind(on_press=self.go_back)
+        header.add_widget(back_button)
+        header.add_widget(Label(text='Contrato de Compra', font_size='22sp', bold=True, color=TEXT_COLOR_DARK, size_hint_x=0.8))
+        
+        root_layout.add_widget(header)
+
+        contract_content = BoxLayout(
+            orientation='vertical',
+            padding=dp(20),
+            spacing=dp(15)
+        )
+        
+        # Exemplo de conteúdo do contrato
+        contract_content.add_widget(Label(text='Detalhes do Contrato', font_size='18sp', bold=True, color=PRIMARY_COLOR))
+        contract_content.add_widget(Label(text='Número do Contrato: #20250822', font_size='14sp', halign='left', valign='middle', color=TEXT_COLOR_DARK))
+        contract_content.add_widget(Label(text='Data de Assinatura: 22/08/2025', font_size='14sp', halign='left', valign='middle', color=TEXT_COLOR_DARK))
+        contract_content.add_widget(Label(text='Partes Envolvidas:', font_size='14sp', bold=True, halign='left', valign='middle', color=TEXT_COLOR_DARK))
+        contract_content.add_widget(Label(text='- Vendedor: João da Silva', font_size='14sp', halign='left', valign='middle', color=TEXT_COLOR_LIGHT))
+        contract_content.add_widget(Label(text='- Comprador: Alexsandro', font_size='14sp', halign='left', valign='middle', color=TEXT_COLOR_LIGHT))
+
+        root_layout.add_widget(contract_content)
+        root_layout.add_widget(Widget()) # Espaçador
+
+        self.add_widget(root_layout)
+
+    def go_back(self, instance):
+        self.manager.current = 'main'
 
 class CompraFirmeApp(App):
     def build(self):
         sm = ScreenManager()
         sm.add_widget(MainScreen(name='main'))
         sm.add_widget(PaymentsScreen(name='payments'))
+        sm.add_widget(ContractScreen(name='contract')) # Adiciona a nova tela ao ScreenManager
         return sm
 
 if __name__ == '__main__':
