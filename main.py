@@ -741,10 +741,11 @@ class NewContractScreen(Screen):
         self.manager.current = 'contract'
 
 class ContractScreen(Screen):
+    # A propriedade deve ser definida aqui, fora de __init__
+    contract_text = StringProperty(CONTRATO_TEMPLATE)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        
-        self.contract_text = StringProperty(CONTRATO_TEMPLATE)
 
         root_layout = BoxLayout(
             orientation='vertical',
@@ -792,9 +793,9 @@ class ContractScreen(Screen):
         )
 
         # Vincule a propriedade de texto do Label à sua StringProperty
-        self.contract_label.bind(texture_size=self.contract_label.setter('size'))
-        self.contract_label.bind(text=self.contract_label.setter('text'))
+        # A propriedade 'contract_text' agora existe quando este bind é chamado
         self.bind(contract_text=self.contract_label.setter('text'))
+        self.contract_label.bind(texture_size=self.contract_label.setter('size'))
 
         contract_content_layout.add_widget(self.contract_label)
         self.scroll_view.add_widget(contract_content_layout)
