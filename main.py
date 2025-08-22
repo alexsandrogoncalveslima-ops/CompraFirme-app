@@ -161,10 +161,10 @@ class MainScreen(Screen):
 
         input_card.add_widget(Label(text='ADICIONAR NOVO PAGAMENTO', font_size='16sp', bold=True, color=TEXT_COLOR_DARK))
         
-        self.name_input = TextInput(hint_text='Nome do Pagador', multiline=False, size_hint_y=None, height=dp(45), font_size='16sp', padding=dp(10), background_color=(1, 1, 1, 1), foreground_color=TEXT_COLOR_DARK, cursor_color=PRIMARY_COLOR, hint_text_color=TEXT_COLOR_LIGHT)
+        self.name_input = TextInput(hint_text='Ex: João da Silva', multiline=False, size_hint_y=None, height=dp(45), font_size='16sp', padding=dp(10), background_color=(1, 1, 1, 1), foreground_color=TEXT_COLOR_DARK, cursor_color=PRIMARY_COLOR, hint_text_color=TEXT_COLOR_LIGHT)
         input_card.add_widget(self.name_input)
 
-        self.value_input = TextInput(hint_text='Valor (ex: 10000.00)', multiline=False, input_type='number', size_hint_y=None, height=dp(45), font_size='16sp', padding=dp(10), background_color=(1, 1, 1, 1), foreground_color=TEXT_COLOR_DARK, cursor_color=PRIMARY_COLOR, hint_text_color=TEXT_COLOR_LIGHT)
+        self.value_input = TextInput(hint_text='Ex: 10000.00', multiline=False, input_type='number', size_hint_y=None, height=dp(45), font_size='16sp', padding=dp(10), background_color=(1, 1, 1, 1), foreground_color=TEXT_COLOR_DARK, cursor_color=PRIMARY_COLOR, hint_text_color=TEXT_COLOR_LIGHT)
         input_card.add_widget(self.value_input)
         
         root_layout.add_widget(input_card)
@@ -597,11 +597,17 @@ class NewContractScreen(Screen):
 
         self.add_widget(root_layout)
         
-    def add_input(self, label_text, **kwargs):
+    def add_input(self, label_text, hint_text='', **kwargs):
         box = BoxLayout(orientation='vertical', size_hint_y=None, height=dp(70), spacing=dp(5))
-        # Ajustado para alinhar o texto do Label à esquerda
         box.add_widget(Label(text=label_text, halign='left', valign='bottom', size_hint_y=None, height=dp(20), text_size=(Window.width - dp(40), None), color=TEXT_COLOR_DARK))
-        text_input = TextInput(multiline=kwargs.get('multiline', False), size_hint_y=None, height=dp(40), background_color=CARD_BG_COLOR, foreground_color=TEXT_COLOR_DARK, hint_text=label_text)
+        text_input = TextInput(
+            multiline=kwargs.get('multiline', False),
+            size_hint_y=None,
+            height=dp(40),
+            background_color=CARD_BG_COLOR,
+            foreground_color=TEXT_COLOR_DARK,
+            hint_text=hint_text
+        )
         box.add_widget(text_input)
         self.input_container.add_widget(box)
         return text_input
@@ -609,62 +615,61 @@ class NewContractScreen(Screen):
     def add_section_title(self, title_text):
         self.input_container.add_widget(Label(text=title_text, font_size='16sp', bold=True, size_hint_y=None, height=dp(30), color=PRIMARY_COLOR))
 
-
     def create_input_fields(self):
         # Campos do Vendedor
         self.add_section_title('DADOS DO VENDEDOR')
-        self.vendedor_nome = self.add_input('Nome:')
-        self.vendedor_nacionalidade = self.add_input('Nacionalidade:')
-        self.vendedor_profissao = self.add_input('Profissão:')
-        self.vendedor_estado_civil = self.add_input('Estado Civil:')
-        self.vendedor_rg = self.add_input('RG:')
-        self.vendedor_cpf = self.add_input('CPF:')
-        self.vendedor_rua = self.add_input('Rua:')
-        self.vendedor_numero = self.add_input('Número:')
-        self.vendedor_bairro = self.add_input('Bairro:')
-        self.vendedor_estado = self.add_input('Estado:')
+        self.vendedor_nome = self.add_input('Nome:', hint_text='Nome Completo do Vendedor')
+        self.vendedor_nacionalidade = self.add_input('Nacionalidade:', hint_text='Nacionalidade')
+        self.vendedor_profissao = self.add_input('Profissão:', hint_text='Profissão')
+        self.vendedor_estado_civil = self.add_input('Estado Civil:', hint_text='Estado Civil')
+        self.vendedor_rg = self.add_input('RG:', hint_text='RG (somente números)')
+        self.vendedor_cpf = self.add_input('CPF:', hint_text='CPF (somente números)')
+        self.vendedor_rua = self.add_input('Rua:', hint_text='Nome da Rua')
+        self.vendedor_numero = self.add_input('Número:', hint_text='Número da Casa/Apartamento')
+        self.vendedor_bairro = self.add_input('Bairro:', hint_text='Bairro')
+        self.vendedor_estado = self.add_input('Estado:', hint_text='Estado (Ex: MG)')
         
         # Campos do Comprador
         self.add_section_title('DADOS DO COMPRADOR')
-        self.comprador_nome = self.add_input('Nome:')
-        self.comprador_nacionalidade = self.add_input('Nacionalidade:')
-        self.comprador_profissao = self.add_input('Profissão:')
-        self.comprador_estado_civil = self.add_input('Estado Civil:')
-        self.comprador_rg = self.add_input('RG:')
-        self.comprador_cpf = self.add_input('CPF:')
-        self.comprador_rua = self.add_input('Rua:')
-        self.comprador_numero = self.add_input('Número:')
-        self.comprador_bairro = self.add_input('Bairro:')
-        self.comprador_estado = self.add_input('Estado:')
+        self.comprador_nome = self.add_input('Nome:', hint_text='Nome Completo do Comprador')
+        self.comprador_nacionalidade = self.add_input('Nacionalidade:', hint_text='Nacionalidade')
+        self.comprador_profissao = self.add_input('Profissão:', hint_text='Profissão')
+        self.comprador_estado_civil = self.add_input('Estado Civil:', hint_text='Estado Civil')
+        self.comprador_rg = self.add_input('RG:', hint_text='RG (somente números)')
+        self.comprador_cpf = self.add_input('CPF:', hint_text='CPF (somente números)')
+        self.comprador_rua = self.add_input('Rua:', hint_text='Nome da Rua')
+        self.comprador_numero = self.add_input('Número:', hint_text='Número da Casa/Apartamento')
+        self.comprador_bairro = self.add_input('Bairro:', hint_text='Bairro')
+        self.comprador_estado = self.add_input('Estado:', hint_text='Estado (Ex: MG)')
 
         # Campos do Imóvel
         self.add_section_title('DADOS DO IMÓVEL')
-        self.imovel_rua = self.add_input('Rua do Imóvel:')
-        self.imovel_numero = self.add_input('Número do Imóvel:')
-        self.imovel_bairro = self.add_input('Bairro do Imóvel:')
-        self.imovel_estado = self.add_input('Estado do Imóvel:')
-        self.imovel_descricao = self.add_input('Descrição Completa do Imóvel:', multiline=True)
-        self.imovel_aquisicao = self.add_input('Forma de Aquisição:')
-        self.imovel_registro = self.add_input('Registro do Imóvel:')
-        self.imovel_matricula = self.add_input('Matrícula do Imóvel:')
+        self.imovel_rua = self.add_input('Rua do Imóvel:', hint_text='Nome da Rua do Imóvel')
+        self.imovel_numero = self.add_input('Número do Imóvel:', hint_text='Número do Imóvel')
+        self.imovel_bairro = self.add_input('Bairro do Imóvel:', hint_text='Bairro do Imóvel')
+        self.imovel_estado = self.add_input('Estado do Imóvel:', hint_text='Estado (Ex: MG)')
+        self.imovel_descricao = self.add_input('Descrição Completa do Imóvel:', multiline=True, hint_text='Descreva o imóvel, área total, etc.')
+        self.imovel_aquisicao = self.add_input('Forma de Aquisição:', hint_text='Ex: Compra e venda')
+        self.imovel_registro = self.add_input('Registro do Imóvel:', hint_text='Número do Registro do Imóvel')
+        self.imovel_matricula = self.add_input('Matrícula do Imóvel:', hint_text='Número da Matrícula do Imóvel')
 
         # Campos de Valores
         self.add_section_title('VALORES E PAGAMENTOS')
-        self.valor_total = self.add_input('Valor Total (R$):', input_type='number')
-        self.sinal = self.add_input('Valor do Sinal (R$):', input_type='number')
-        self.cheque_sinal = self.add_input('Cheque do Sinal:')
-        self.banco_sinal = self.add_input('Banco do Sinal:')
-        self.valor_parcela_1 = self.add_input('Valor 1ª Parcela (R$):', input_type='number')
-        self.data_parcela_1 = self.add_input('Data 1ª Parcela (DD/MM/AAAA):')
-        self.saldo_restante = self.add_input('Saldo Restante (R$):', input_type='number')
-        self.data_lavratura_escritura = self.add_input('Data Lavratura Escritura (DD/MM/AAAA):')
-        self.porcentagem_multa = self.add_input('Multa (%):', input_type='number')
-        self.indice_reajuste = self.add_input('Índice de Reajuste:')
-        self.data_transferencia_posse = self.add_input('Data Transferência Posse (DD/MM/AAAA):')
-        self.aluguel_diario = self.add_input('Aluguel Diário (R$):', input_type='number')
-        self.local_assinatura = self.add_input('Local de Assinatura:')
-        self.data_assinatura = self.add_input('Data da Assinatura (DD/MM/AAAA):')
-        self.foro = self.add_input('Foro:')
+        self.valor_total = self.add_input('Valor Total (R$):', input_type='number', hint_text='280000.00')
+        self.sinal = self.add_input('Valor do Sinal (R$):', input_type='number', hint_text='50000.00')
+        self.cheque_sinal = self.add_input('Cheque do Sinal:', hint_text='Número do Cheque')
+        self.banco_sinal = self.add_input('Banco do Sinal:', hint_text='Nome do Banco')
+        self.valor_parcela_1 = self.add_input('Valor 1ª Parcela (R$):', input_type='number', hint_text='10000.00')
+        self.data_parcela_1 = self.add_input('Data 1ª Parcela (DD/MM/AAAA):', hint_text='DD/MM/AAAA')
+        self.saldo_restante = self.add_input('Saldo Restante (R$):', input_type='number', hint_text='20000.00')
+        self.data_lavratura_escritura = self.add_input('Data Lavratura Escritura (DD/MM/AAAA):', hint_text='DD/MM/AAAA')
+        self.porcentagem_multa = self.add_input('Multa (%):', input_type='number', hint_text='Ex: 10%')
+        self.indice_reajuste = self.add_input('Índice de Reajuste:', hint_text='Ex: IGP-M ou IPCA')
+        self.data_transferencia_posse = self.add_input('Data Transferência Posse (DD/MM/AAAA):', hint_text='DD/MM/AAAA')
+        self.aluguel_diario = self.add_input('Aluguel Diário (R$):', input_type='number', hint_text='100.00')
+        self.local_assinatura = self.add_input('Local de Assinatura:', hint_text='Cidade e Estado')
+        self.data_assinatura = self.add_input('Data da Assinatura (DD/MM/AAAA):', hint_text='DD/MM/AAAA')
+        self.foro = self.add_input('Foro:', hint_text='Foro da Comarca')
 
     def generate_contract(self, instance):
         try:
